@@ -87,9 +87,9 @@
 
             <!-- FILTERS & TABLE -->
             <div class="flex gap-4 bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                <select class="text-sm border-gray-300 rounded-lg p-2 border"><option>All Customers</option></select>
-                <select class="text-sm border-gray-300 rounded-lg p-2 border"><option>All Products</option></select>
-                <select class="text-sm border-gray-300 rounded-lg p-2 border"><option>All Destinations</option></select>
+                <select id="filter-customer" onchange="applyFilters()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Customers</option></select>
+                <select id="filter-product" onchange="applyFilters()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Products</option></select>
+                <select id="filter-country" onchange="applyFilters()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Destinations</option></select>
             </div>
 
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -115,21 +115,36 @@
 
     <script>
         const shipments = [
-            { cust: 'AgriCorp China', po: 'PO-10492', di: 'DI-2023-8994', prod: 'THP', log: 'MSC EMMA / 20\'', etd: '12 Nov', eta: '25 Nov', status: 'Issue Logged', stuffing: '#', docs: '' },
-            { cust: 'Global Feed', po: 'PO-10498', di: 'DI-2023-9005', prod: 'THP', log: 'CMA CGM / 40\'', etd: '15 Nov', eta: '28 Nov', status: 'In Progress', stuffing: '#', docs: '#' }
+            { cust: 'AgriCorp China', po: 'PO-10492', di: 'DI-2023-8994', prod: 'THP', log: 'MSC EMMA / 20\'', etd: '12 Nov', eta: '25 Nov', status: 'Issue Logged', stuffing: '#', docs: '', country: 'China' },
+            { cust: 'Global Feed', po: 'PO-10498', di: 'DI-2023-9005', prod: 'THP', log: 'CMA CGM / 40\'', etd: '15 Nov', eta: '28 Nov', status: 'In Progress', stuffing: '#', docs: '#', country: 'Japan' }
         ];
 
-        function showTooltip(e, region, act, vol) {
-            const tt = document.getElementById('map-tooltip');
-            tt.innerText = `Region: ${region} | Active: ${act} Containers | Volume: ${vol} MT`;
-            tt.style.left = (e.clientX + 10) + 'px'; tt.style.top = (e.clientY + 10) + 'px';
-            tt.classList.remove('hidden');
+        function initFilters() {
+            const custs = [...new Set(shipments.map(s => s.cust))];
+            const prods = [...new Set(shipments.map(s => s.prod))];
+            const dests = [...new Set(shipments.map(s => s.country))];
+            
+            const populate = (id, arr) => {
+                const el = document.getElementById(id);
+                arr.forEach(val => el.innerHTML += `<option value="${val}">${val}</option>`);
+            };
+            populate('filter-customer', custs);
+            populate('filter-product', prods);
+            populate('filter-country', dests);
         }
-        window.onmousemove = (e) => {
-            const tt = document.getElementById('map-tooltip');
-            if(!tt.classList.contains('hidden')) { tt.style.left = (e.clientX + 10) + 'px'; tt.style.top = (e.clientY + 10) + 'px'; }
+
+        function applyFilters() {
+            const cust = document.getElementById('filter-customer').value;
+            const prod = document.getElementById('filter-product').value;
+            const dest = document.getElementById('filter-country').value;
+            
+            const filtered = shipments.filter(s => 
+                (cust === "" || s.cust === cust) &&
+                (prod === "" || s.prod === prod) &&
+                (dest === "" || s.country === dest)
+            );
+            renderTable(filtered);
         }
-        window.onmouseout = () => document.getElementById('map-tooltip').classList.add('hidden');
 
         function renderTable(data) {
             const body = document.getElementById('shipment-table-body');
@@ -150,7 +165,13 @@
                 </tr>
             `).join('');
         }
+        
+        initFilters();
         renderTable(shipments);
+        
+        function showTooltip(e, region, act, vol) { /* ... */ }
+        window.onmousemove = (e) => { /* ... */ }
+        window.onmouseout = () => { /* ... */ }
         function switchView(v) { /* ... */ }
     </script>
 </body>
