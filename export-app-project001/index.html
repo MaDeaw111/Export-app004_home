@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WICHAI.AGRI-TRADE CO.,LTD - Export Ops Platform</title>
+    <title>WICHAI.AGRI-TRADE - Export Ops Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F9FAFB; }
+        body { font-family: 'Inter', 'IBM Plex Sans Thai', sans-serif; background-color: #F9FAFB; }
         
         /* Heatmap Styles */
         .heat-0 { background-color: #FFFFFF; }
@@ -27,10 +27,16 @@
         }
         .heat-1.bg-stripe { background-image: repeating-linear-gradient(45deg, rgba(6, 95, 70, 0.1), rgba(6, 95, 70, 0.1) 10px, transparent 10px, transparent 20px); }
 
-        /* Hide scrollbar for clean minimal look */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        
+        /* Modal animation */
+        .modal-enter { animation: modalFadeIn 0.2s ease-out forwards; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col">
@@ -45,14 +51,18 @@
                 </div>
                 <div class="hidden md:ml-10 md:flex md:space-x-8">
                     <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn border-emerald-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                        Executive Dashboard
+                        Master Logistics
                     </button>
                     <button onclick="switchView('calendar')" id="nav-calendar" class="nav-btn border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                         Stuffing Calendar
                     </button>
+                    <button onclick="switchView('warehouse')" id="nav-warehouse" class="nav-btn border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                        Warehouse App
+                    </button>
                 </div>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center gap-4">
+                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">Management Role</span>
                 <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 text-sm font-medium text-gray-600 border border-gray-200">
                     JD
                 </span>
@@ -60,68 +70,27 @@
         </div>
     </nav>
 
-    <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         
         <!-- ========================================== -->
-        <!-- VIEW 1: EXECUTIVE & SALES SUPPORT DASHBOARD-->
+        <!-- VIEW 1: MASTER LOGISTICS & EXECUTION       -->
         <!-- ========================================== -->
         <div id="view-dashboard" class="max-w-7xl mx-auto space-y-6 block">
             
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold text-gray-900">Operations Overview</h1>
-                <div class="text-sm text-gray-500">Last updated: Just now</div>
-            </div>
-
-            <!-- Active Alerts Panel -->
-            <div class="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm mb-6 flex items-start gap-4">
-                <div class="p-2 bg-red-100 rounded-full text-red-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-900">Logistics Execution Control</h1>
+                    <p class="text-sm text-gray-500 mt-1">Real-time status tracking for Tapioca Hard Pellet shipments.</p>
                 </div>
-                <div class="flex-1">
-                    <h3 class="text-sm font-semibold text-red-800">Critical Shipment Alerts (2)</h3>
-                    <ul class="mt-2 space-y-2">
-                        <li class="text-sm text-red-700 bg-white bg-opacity-50 px-3 py-2 rounded-md border border-red-100 flex justify-between">
-                            <span><span class="font-semibold">DI-2023-8994</span> &bull; Vessel delay due to port congestion at POD</span>
-                            <a href="#" class="font-medium underline">Resolve</a>
-                        </li>
-                        <li class="text-sm text-red-700 bg-white bg-opacity-50 px-3 py-2 rounded-md border border-red-100 flex justify-between">
-                            <span><span class="font-semibold">DI-2023-9012</span> &bull; Actual Moisture 14.2% exceeds spec (Max 14.0%)</span>
-                            <a href="#" class="font-medium underline">Resolve</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- KPIs -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-sm font-medium text-gray-500">PO Fulfillment Progress</h3>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <span class="text-3xl font-semibold text-gray-900">42,500</span>
-                        <span class="text-sm text-gray-500">/ 50,000 MT</span>
-                    </div>
-                    <div class="mt-4 w-full bg-gray-100 rounded-full h-2">
-                        <div class="bg-emerald-500 h-2 rounded-full" style="width: 85%"></div>
-                    </div>
-                    <p class="mt-2 text-xs text-emerald-600 font-medium">85% Completed this month</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-sm font-medium text-gray-500">Active Shipments</h3>
-                    <p class="text-3xl font-semibold text-gray-900 mt-2">14</p>
-                    <p class="text-sm text-gray-500 mt-1">across 3 vessels</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-sm font-medium text-gray-500">Stuffing Today</h3>
-                    <p class="text-3xl font-semibold text-gray-900 mt-2">12</p>
-                    <p class="text-sm text-gray-500 mt-1">Containers scheduled</p>
-                </div>
+                <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
+                    + New Booking
+                </button>
             </div>
 
             <!-- Logistics Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h2 class="text-sm font-semibold text-gray-700">Master Logistics & Execution</h2>
+                    <h2 class="text-sm font-semibold text-gray-700">Active Shipments</h2>
                     <button class="text-sm text-emerald-600 font-medium hover:text-emerald-700">Export CSV</button>
                 </div>
                 <div class="overflow-x-auto">
@@ -138,12 +107,12 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
-                            <tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-semibold text-gray-900">AgriCorp China</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-500">PO-10492</div>
+                                    <div class="text-sm text-gray-500 font-mono">PO-10492</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-mono font-medium text-gray-900">DI-2023-8994</div>
@@ -160,15 +129,15 @@
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 border border-red-200">Issue Logged</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="#" class="text-emerald-600 hover:text-emerald-900">View</a>
+                                    <a href="#" class="text-emerald-600 hover:text-emerald-900 underline underline-offset-2">View</a>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-semibold text-gray-900">Global Feed Mills</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-500">PO-10498</div>
+                                    <div class="text-sm text-gray-500 font-mono">PO-10498</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-mono font-medium text-gray-900">DI-2023-9005</div>
@@ -182,10 +151,10 @@
                                     <div class="text-xs text-gray-500">25x 20' &bull; ETD: 15 Nov</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">Stuffing in Progress</span>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">In Progress</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="#" class="text-emerald-600 hover:text-emerald-900">View</a>
+                                    <a href="#" class="text-emerald-600 hover:text-emerald-900 underline underline-offset-2">View</a>
                                 </td>
                             </tr>
                         </tbody>
@@ -195,7 +164,7 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- VIEW 2: STUFFING HEATMAP CALENDAR          -->
+        <!-- VIEW 2: INTERACTIVE STUFFING CALENDAR      -->
         <!-- ========================================== -->
         <div id="view-calendar" class="max-w-7xl mx-auto space-y-6 hidden">
             
@@ -220,7 +189,6 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <!-- Days Header -->
                 <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
                     <div class="py-3 text-center text-xs font-medium text-gray-500 uppercase">Mon</div>
                     <div class="py-3 text-center text-xs font-medium text-gray-500 uppercase">Tue</div>
@@ -231,98 +199,99 @@
                     <div class="py-3 text-center text-xs font-medium text-gray-500 uppercase text-red-400">Sun</div>
                 </div>
                 
-                <!-- Calendar Grid (Mockup for Nov 2023 starting Wed) -->
-                <div class="grid grid-cols-7 auto-rows-[120px] gap-px bg-gray-200">
+                <!-- Calendar Grid with Micro-Cards -->
+                <div class="grid grid-cols-7 auto-rows-[140px] gap-px bg-gray-200">
                     
-                    <!-- Empty slots -->
                     <div class="bg-white heat-0 p-2"></div>
                     <div class="bg-white heat-0 p-2"></div>
                     
-                    <!-- Days -->
                     <div class="heat-0 p-2 relative group hover:opacity-90 transition-opacity"><span class="text-sm text-gray-500">1</span></div>
-                    <div class="heat-1 bg-stripe p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
+                    
+                    <!-- Day 2: Planned -->
+                    <div class="heat-1 bg-stripe p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer" onclick="openModal('2 Nov 2023', [{cust: 'AgriCorp', vol: '4x20\''}])">
                         <span class="text-sm font-medium">2</span>
+                        <div class="mt-1 space-y-1 w-full relative z-10">
+                            <div class="text-[10px] bg-black/10 text-gray-900 px-1.5 py-0.5 rounded truncate font-medium">AgriCorp: 4x20'</div>
+                        </div>
                         <div class="mt-auto self-end text-right">
                             <div class="text-xs font-medium opacity-75">4 Cntr</div>
-                            <div class="text-lg font-bold">4x20'</div>
                         </div>
                         <div class="absolute inset-0 border-2 border-transparent group-hover:border-emerald-400 rounded-sm"></div>
                     </div>
-                    <div class="heat-1 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
+
+                    <!-- Day 3: Confirmed -->
+                    <div class="heat-1 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer" onclick="openModal('3 Nov 2023', [{cust: 'Global Feed', vol: '3x20\''}, {cust: 'SunT', vol: '2x40\''}])">
                         <span class="text-sm font-medium">3</span>
+                        <div class="mt-1 space-y-1 w-full relative z-10">
+                            <div class="text-[10px] bg-black/20 text-white px-1.5 py-0.5 rounded truncate font-medium">Global Feed: 3x20'</div>
+                            <div class="text-[10px] bg-black/20 text-white px-1.5 py-0.5 rounded truncate font-medium">SunT: 2x40'</div>
+                        </div>
                         <div class="mt-auto self-end text-right">
                             <div class="text-xs font-medium opacity-75">5 Cntr</div>
-                            <div class="text-lg font-bold">3x20', 2x40'</div>
                         </div>
                     </div>
-                    <div class="heat-2 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
+
+                    <!-- Day 4: Confirmed (Medium Load) -->
+                    <div class="heat-2 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer" onclick="openModal('4 Nov 2023', [{cust: 'MegaCorp', vol: '6x20\', 2x40\''}])">
                         <span class="text-sm font-medium">4</span>
+                        <div class="mt-1 space-y-1 w-full relative z-10">
+                            <div class="text-[10px] bg-black/20 text-white px-1.5 py-0.5 rounded truncate font-medium">MegaCorp: 6x20', 2x40'</div>
+                        </div>
                         <div class="mt-auto self-end text-right">
                             <div class="text-xs font-medium opacity-75">8 Cntr</div>
-                            <div class="text-lg font-bold">6x20', 2x40'</div>
                         </div>
                     </div>
+                    
                     <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">5</span></div>
                     
-                    <div class="heat-3 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
+                    <!-- Day 6: Overload Confirmed -->
+                    <div class="heat-3 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer" onclick="openModal('6 Nov 2023', [{cust: 'AgriCorp', vol: '10x20\''}, {cust: 'Global Feed', vol: '4x40\''}])">
                         <span class="text-sm font-medium">6</span>
-                        <div class="mt-auto self-end text-right">
-                            <div class="text-xs font-medium opacity-75">14 Cntr</div>
-                            <div class="text-lg font-bold">10x20', 4x40'</div>
+                        <div class="mt-1 space-y-1 w-full relative z-10">
+                            <div class="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded truncate font-medium">AgriCorp: 10x20'</div>
+                            <div class="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded truncate font-medium">Global Feed: 4x40'</div>
+                        </div>
+                        <div class="mt-auto self-end text-right text-red-200">
+                            <div class="text-xs font-bold">14 Cntr (Critical)</div>
                         </div>
                     </div>
+
                     <div class="heat-2 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
                         <span class="text-sm font-medium">7</span>
+                        <div class="mt-1 space-y-1 w-full relative z-10">
+                            <div class="text-[10px] bg-black/20 text-white px-1.5 py-0.5 rounded truncate font-medium">Global Feed: 5x20'</div>
+                            <div class="text-[10px] bg-black/20 text-white px-1.5 py-0.5 rounded truncate font-medium">SunT: 4x40'</div>
+                        </div>
                         <div class="mt-auto self-end text-right">
                             <div class="text-xs font-medium opacity-75">9 Cntr</div>
-                            <div class="text-lg font-bold">5x20', 4x40'</div>
                         </div>
                     </div>
-                    <div class="heat-1 p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
-                        <span class="text-sm font-medium">8</span>
-                        <div class="mt-auto self-end text-right">
-                            <div class="text-xs font-medium opacity-75">2 Cntr</div>
-                            <div class="text-lg font-bold">2x20'</div>
-                        </div>
-                    </div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">9</span></div>
-                    <div class="heat-1 bg-stripe p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
-                        <span class="text-sm font-medium">10</span>
-                        <div class="mt-auto self-end text-right">
-                            <div class="text-xs font-medium opacity-75">5 Cntr</div>
-                            <div class="text-lg font-bold">5x20'</div>
-                        </div>
-                    </div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">11</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">12</span></div>
-                    
-                    <!-- Filling remaining to show structure -->
-                    <div class="heat-2 bg-stripe p-2 relative flex flex-col group hover:opacity-90 transition-opacity cursor-pointer">
-                        <span class="text-sm font-medium">13</span>
-                        <div class="mt-auto self-end text-right">
-                            <div class="text-xs font-medium opacity-75">7 Cntr</div>
-                            <div class="text-lg font-bold">4x20', 3x40'</div>
-                        </div>
-                    </div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">14</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">15</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">16</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">17</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">18</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">19</span></div>
 
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">20</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">21</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">22</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">23</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">24</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">25</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">26</span></div>
+                    <!-- Fill remaining with basic structure for layout completeness -->
+                    <div class="heat-1 p-2 flex flex-col group"><span class="text-sm font-medium">8</span><div class="mt-auto self-end"><div class="text-xs font-medium opacity-75">2 Cntr</div></div></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">9</span></div>
+                    <div class="heat-1 bg-stripe p-2 flex flex-col group"><span class="text-sm font-medium">10</span><div class="mt-auto self-end"><div class="text-xs font-medium opacity-75">5 Cntr</div></div></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">11</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">12</span></div>
+                    <div class="heat-2 bg-stripe p-2 flex flex-col group"><span class="text-sm font-medium">13</span><div class="mt-auto self-end"><div class="text-xs font-medium opacity-75">7 Cntr</div></div></div>
                     
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">27</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">28</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">29</span></div>
-                    <div class="heat-0 p-2 relative group"><span class="text-sm text-gray-500">30</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">14</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">15</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">16</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">17</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">18</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">19</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">20</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">21</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">22</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">23</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">24</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">25</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">26</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">27</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">28</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">29</span></div>
+                    <div class="heat-0 p-2"><span class="text-sm text-gray-500">30</span></div>
                     <div class="bg-white p-2"></div>
                     <div class="bg-white p-2"></div>
                     <div class="bg-white p-2"></div>
@@ -330,28 +299,144 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- VIEW 3: WAREHOUSE FIELD APP (MOBILE)       -->
+        <!-- ========================================== -->
+        <div id="view-warehouse" class="max-w-md mx-auto space-y-6 hidden mt-4">
+            
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-900">Stuffing Input</h1>
+                <p class="text-sm text-gray-500">Record actuals directly from the floor</p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6 space-y-6">
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Active DI Number</label>
+                    <select class="block w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500 border appearance-none font-semibold">
+                        <option>DI-2023-9005 (CMA CGM LEO)</option>
+                        <option>DI-2023-8994 (MSC EMMA)</option>
+                    </select>
+                    <p class="mt-2 text-xs text-gray-500 flex justify-between">
+                        <span>THP - Jumbo Bag</span>
+                        <span class="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Container 1 / 25</span>
+                    </p>
+                </div>
+
+                <hr class="border-gray-100">
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Container Number</label>
+                        <input type="text" placeholder="MSKU1234567" class="block w-full rounded-lg border-gray-300 border px-4 py-3 text-gray-900 uppercase focus:border-emerald-500 focus:ring-emerald-500 placeholder-gray-400 font-mono tracking-widest text-lg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Seal Number</label>
+                        <input type="text" placeholder="8923001" class="block w-full rounded-lg border-gray-300 border px-4 py-3 text-gray-900 uppercase focus:border-emerald-500 focus:ring-emerald-500 placeholder-gray-400 font-mono tracking-widest text-lg">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Actual Net Weight (MT)</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <input type="number" step="0.01" value="19.00" class="block w-full rounded-lg border-gray-300 border pl-4 pr-12 py-3 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500 text-xl font-bold text-center">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm font-medium">MT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Inspection Photo</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-emerald-200 border-dashed rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer group">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-emerald-500 group-hover:scale-110 transition-transform" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600 justify-center mt-2">
+                                <span class="relative font-medium text-emerald-700">Tap to open camera</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 active:scale-[0.98] transition-transform">
+                    SUBMIT DATA
+                </button>
+            </div>
+        </div>
+
     </main>
 
-    <!-- Simple Javascript for View Switching -->
+    <!-- Deep Dive Modal -->
+    <div id="calendar-modal" class="hidden fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden modal-enter">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-900" id="modal-date-title">Date</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-200 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Scheduled Stuffing</h4>
+                <ul id="modal-list" class="space-y-3">
+                    <!-- Dynamic Content -->
+                </ul>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 text-right">
+                <button onclick="closeModal()" class="text-sm font-medium text-gray-700 hover:text-gray-900">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchView(viewId) {
-            // Hide all views
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-calendar').classList.add('hidden');
+            document.getElementById('view-warehouse').classList.add('hidden');
             
-            // Reset nav styles
-            const navs = ['dashboard', 'calendar'];
+            const navs = ['dashboard', 'calendar', 'warehouse'];
             navs.forEach(nav => {
                 const el = document.getElementById('nav-' + nav);
-                el.className = "nav-btn border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors";
+                if(el) el.className = "nav-btn border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors";
             });
 
-            // Show selected view
             document.getElementById('view-' + viewId).classList.remove('hidden');
             
-            // Highlight selected nav
             const activeNav = document.getElementById('nav-' + viewId);
-            activeNav.className = "nav-btn border-emerald-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors";
+            if(activeNav) activeNav.className = "nav-btn border-emerald-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors";
+        }
+
+        // Modal Logic
+        const modal = document.getElementById('calendar-modal');
+        const modalList = document.getElementById('modal-list');
+        const modalTitle = document.getElementById('modal-date-title');
+
+        function openModal(dateStr, loads) {
+            modalTitle.innerText = dateStr;
+            modalList.innerHTML = '';
+            
+            loads.forEach(load => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100";
+                li.innerHTML = `
+                    <div>
+                        <p class="text-sm font-bold text-gray-900">${load.cust}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">PO Linked &bull; Confirmed</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-md border border-emerald-200">${load.vol}</span>
+                    </div>
+                `;
+                modalList.appendChild(li);
+            });
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
         }
     </script>
 </body>
