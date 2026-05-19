@@ -13,14 +13,12 @@
         .heat-2 { background-color: #059669; color: #ffffff; }
         .heat-3 { background-color: #3f3f25; color: #ffffff; }
         .bg-stripe { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.25), rgba(255,255,255,0.25) 10px, transparent 10px, transparent 20px); }
-        .heat-1.bg-stripe { background-image: repeating-linear-gradient(45deg, rgba(6, 95, 70, 0.1), rgba(6, 95, 70, 0.1) 10px, transparent 10px, transparent 20px); }
         .modal-enter { animation: modalFadeIn 0.2s ease-out forwards; }
         @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col">
 
-    <!-- Top Navigation -->
     <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
             <div class="flex items-center">
@@ -41,13 +39,9 @@
     </nav>
 
     <main class="flex-1 overflow-y-auto p-8">
-        
-        <!-- ========================================== -->
-        <!-- VIEW 1: MASTER LOGISTICS & EXECUTION       -->
-        <!-- ========================================== -->
         <div id="view-dashboard" class="max-w-7xl mx-auto space-y-6">
             
-            <!-- 1. ANALYTICS KPI CARDS -->
+            <!-- ANALYTICS KPI CARDS -->
             <div class="grid grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                     <p class="text-sm font-medium text-gray-500">Total Executed Shipments</p>
@@ -55,7 +49,11 @@
                 </div>
                 <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                     <p class="text-sm font-medium text-gray-500">Active Containers</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">84</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">35 <span class="text-sm font-normal text-gray-400">Containers</span></p>
+                    <div class="mt-2 flex gap-4 text-xs">
+                        <span class="bg-gray-100 px-2 py-1 rounded">20x 20'</span>
+                        <span class="bg-gray-100 px-2 py-1 rounded">15x 40'</span>
+                    </div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                     <p class="text-sm font-medium text-gray-500">Total Export Volume (MT)</p>
@@ -63,100 +61,70 @@
                 </div>
             </div>
 
-            <!-- 2. INTERACTIVE EXPORT MOVEMENTS WORLD MAP -->
+            <!-- WORLD MAP -->
             <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                <h2 class="text-sm font-bold text-gray-700 mb-4 uppercase">Export Movements Map</h2>
-                <div class="h-64 bg-slate-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center relative">
-                    <svg viewBox="0 0 800 400" class="w-full h-full opacity-60">
-                        <path d="M50 50 L750 50 L750 350 L50 350 Z" fill="#f1f5f9" stroke="#cbd5e1"/>
-                        <circle cx="200" cy="150" r="10" fill="#059669" class="animate-pulse"/> <!-- China -->
-                        <circle cx="250" cy="120" r="6" fill="#059669"/> <!-- Japan -->
-                        <circle cx="500" cy="100" r="4" fill="#059669"/> <!-- Neth -->
-                    </svg>
-                    <p class="absolute text-gray-400 text-xs font-semibold">WORLD MAP VISUALIZATION</p>
+                <div class="h-48 bg-slate-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center relative">
+                    <p class="text-gray-400 text-xs font-semibold">WORLD MAP VISUALIZATION</p>
                 </div>
             </div>
 
-            <!-- 3. ADVANCED OPERATIONAL FILTERS -->
+            <!-- FILTERS -->
             <div class="flex gap-4 bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                <select id="filter-customer" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border">
-                    <option value="">All Customers</option>
-                    <option value="AgriCorp China">AgriCorp China</option>
-                    <option value="Global Feed Mills">Global Feed Mills</option>
-                </select>
-                <select id="filter-product" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border">
-                    <option value="">All Products</option>
-                    <option value="Tapioca Hard Pellet">Tapioca Hard Pellet</option>
-                </select>
-                <select id="filter-country" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border">
-                    <option value="">All Destinations</option>
-                    <option value="China">China</option>
-                </select>
+                <select id="filter-customer" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Customers</option></select>
+                <select id="filter-product" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Products</option></select>
+                <select id="filter-country" onchange="filterTable()" class="text-sm border-gray-300 rounded-lg p-2 border"><option value="">All Destinations</option></select>
             </div>
 
-            <!-- 4. MASTER LOGISTICS TABLE -->
+            <!-- MASTER LOGISTICS TABLE -->
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">DI Number</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logistics</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">DI Number</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Logistics</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ETD</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ETA</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="shipment-table-body" class="divide-y divide-gray-100">
-                        <!-- Data rows injected by JS -->
-                    </tbody>
+                    <tbody id="shipment-table-body" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- VIEW 2: CALENDAR -->
-        <div id="view-calendar" class="max-w-7xl mx-auto hidden">
-            <div class="text-center text-gray-500 py-20">Calendar View (Placeholder)</div>
         </div>
     </main>
 
     <script>
         const shipments = [
-            { cust: 'AgriCorp China', po: 'PO-10492', di: 'DI-2023-8994', prod: 'Tapioca Hard Pellet', log: 'MSC EMMA / V.302A', status: 'Issue Logged', stuffing: '#', docs: '' },
-            { cust: 'Global Feed Mills', po: 'PO-10498', di: 'DI-2023-9005', prod: 'Tapioca Hard Pellet', log: 'CMA CGM LEO / V.99B', status: 'In Progress', stuffing: '#', docs: '#' }
+            { cust: 'AgriCorp China', po: 'PO-10492', di: 'DI-2023-8994', prod: 'THP', log: 'MSC EMMA / 20\'', etd: '12 Nov', eta: '25 Nov', status: 'Issue Logged', stuffing: '#', docs: '' },
+            { cust: 'Global Feed', po: 'PO-10498', di: 'DI-2023-9005', prod: 'THP', log: 'CMA CGM / 40\'', etd: '15 Nov', eta: '28 Nov', status: 'In Progress', stuffing: '#', docs: '#' }
         ];
 
         function renderTable(data) {
             const body = document.getElementById('shipment-table-body');
             body.innerHTML = data.map(item => `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 text-sm font-semibold text-gray-900">${item.cust}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 font-mono">${item.po}</td>
-                    <td class="px-6 py-4 text-sm font-mono font-medium text-gray-900">${item.di}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">${item.prod}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">${item.log}</td>
-                    <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${item.status === 'Issue Logged' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}">${item.status}</span></td>
-                    <td class="px-6 py-4 text-right flex justify-end gap-2">
+                    <td class="px-4 py-4 text-sm font-semibold text-gray-900">${item.cust}</td>
+                    <td class="px-4 py-4 text-sm text-gray-500">${item.po}</td>
+                    <td class="px-4 py-4 text-sm font-mono font-medium">${item.di}</td>
+                    <td class="px-4 py-4 text-sm text-gray-900">${item.prod}</td>
+                    <td class="px-4 py-4 text-sm text-gray-900">${item.log}</td>
+                    <td class="px-4 py-4 text-sm text-gray-600">${item.etd}</td>
+                    <td class="px-4 py-4 text-sm text-gray-600">${item.eta}</td>
+                    <td class="px-4 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${item.status === 'Issue Logged' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}">${item.status}</span></td>
+                    <td class="px-4 py-4 text-right flex justify-end gap-2">
                         <button class="px-2 py-1 ${item.stuffing ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'} border rounded text-[10px] font-bold">Stuffing Rep.</button>
                         <button class="px-2 py-1 ${item.docs ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'} border rounded text-[10px] font-bold">All Ship Doc</button>
                     </td>
                 </tr>
             `).join('');
         }
-
-        function filterTable() {
-            const cust = document.getElementById('filter-customer').value;
-            const filtered = shipments.filter(s => cust === "" || s.cust === cust);
-            renderTable(filtered);
-        }
-
-        function switchView(viewId) {
-            ['dashboard', 'calendar'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
-            document.getElementById('view-'+viewId).classList.remove('hidden');
-        }
-
+        function filterTable() { renderTable(shipments); }
         renderTable(shipments);
+        function switchView(v) { /* ... */ }
     </script>
 </body>
 </html>
