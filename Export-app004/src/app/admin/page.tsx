@@ -1500,11 +1500,10 @@ function AdminPortalContent() {
                             </td>
                             <td className="py-3 px-3">
                               <span className="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-900 text-[10px] font-bold text-blue-300">
-                                {ship.shipment_type === "bulk" 
-                                  ? "N/A - Bulk" 
-                                  : ship.shipment_type === "domestic" 
-                                    ? "Truck Logistics" 
-                                    : (ship.container_size || "40'")}
+                                {ship.container_size || (
+                                  ship.shipment_type === "bulk" ? "Bulk Vessel (3k MT+)" :
+                                  ship.shipment_type === "domestic" ? "Truck Logistics" : "40'"
+                                )}
                               </span>
                             </td>
                             <td className="py-3 px-3">
