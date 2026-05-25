@@ -390,8 +390,9 @@ function ClientPortalContent() {
                                     if (type === "bulk") {
                                       physStages = ["Production", "Barge Loading", "River Transit", "Sichang Anchorage", "Sailing (ETD/ETA)"];
                                     } else if (type === "domestic") {
-                                      physStages = ["Production", "Queueing", "Weigh-In", "Weigh-Out", "Delivered"];
+                                      physStages = ["Production", "Queueing", "Delivered"];
                                     }
+                                    const clampedPhysIndex = Math.min(activePhysIndex, physStages.length - 1);
                                     const isPhysPulse = shipStatus !== "eta";
 
                                     return (
@@ -401,15 +402,15 @@ function ClientPortalContent() {
                                           {/* Active Progress Line */}
                                           <div 
                                             className="h-full bg-emerald-500/80 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${(activePhysIndex / (physStages.length - 1)) * 100}%` }}
+                                            style={{ width: `${(clampedPhysIndex / (physStages.length - 1)) * 100}%` }}
                                           ></div>
                                         </div>
 
                                         {/* Nodes Container */}
                                         <div className="flex justify-between items-center relative z-10 w-full">
                                           {physStages.map((label, idx) => {
-                                            const isCompleted = idx < activePhysIndex;
-                                            const isActive = idx === activePhysIndex;
+                                            const isCompleted = idx < clampedPhysIndex;
+                                            const isActive = idx === clampedPhysIndex;
                                             
                                             return (
                                               <div key={label} className="flex flex-col items-center relative">
@@ -503,8 +504,9 @@ function ClientPortalContent() {
                                     if (type === "bulk") {
                                       docStages = ["PO Issued", "WH Weight", "Draft Docs", "All Ship Docs"];
                                     } else if (type === "domestic") {
-                                      docStages = ["PO Issued", "Weight Ticket", "Delivery Order", "Invoice", "Paid"];
+                                      docStages = ["PO Issued", "Delivery Order", "Invoice", "Paid"];
                                     }
+                                    const clampedDocIndex = Math.min(activeDocIndex, docStages.length - 1);
 
                                     return (
                                       <div className="relative w-full pt-2 pb-8 px-8">
@@ -513,15 +515,15 @@ function ClientPortalContent() {
                                           {/* Active Progress Line */}
                                           <div 
                                             className="h-full bg-emerald-500/80 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${(activeDocIndex / (docStages.length - 1)) * 100}%` }}
+                                            style={{ width: `${(clampedDocIndex / (docStages.length - 1)) * 100}%` }}
                                           ></div>
                                         </div>
 
                                         {/* Nodes Container */}
                                         <div className="flex justify-between items-center relative z-10 w-full">
                                           {docStages.map((label, idx) => {
-                                            const isCompleted = idx < activeDocIndex;
-                                            const isActive = idx === activeDocIndex;
+                                            const isCompleted = idx < clampedDocIndex;
+                                            const isActive = idx === clampedDocIndex;
                                             
                                             return (
                                               <div key={label} className="flex flex-col items-center relative">
