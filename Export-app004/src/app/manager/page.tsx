@@ -56,6 +56,7 @@ function ManagerPortalContent() {
   const [activeMonthSlicer, setActiveMonthSlicer] = useState("all");
   const [activeTypeSlicer, setActiveTypeSlicer] = useState("all");
   const [activeProductSlicer, setActiveProductSlicer] = useState("all");
+  const [hoveredMonthIdx, setHoveredMonthIdx] = useState<number | null>(null);
 
   // Retrieve customer name for a shipment (Declared at the top to resolve runtime ReferenceError)
   const getCustomerName = (poNo: string) => {
@@ -245,33 +246,51 @@ function ManagerPortalContent() {
     }));
   }, [filteredShipmentsForCharts]);
 
-  // Chart 3: Weekly Price Index ($/MT)
-  const weeklyPriceIndex = useMemo(() => {
-    const weekData = [
-      { week: "Week 1", totalPrice: 0, count: 0, defaultVal: 610 },
-      { week: "Week 2", totalPrice: 0, count: 0, defaultVal: 630 },
-      { week: "Week 3", totalPrice: 0, count: 0, defaultVal: 645 },
-      { week: "Week 4", totalPrice: 0, count: 0, defaultVal: 670 },
-      { week: "Week 5", totalPrice: 0, count: 0, defaultVal: 690 }
-    ];
+  // Chart 3: Monthly Price Index ($/MT) - Multi-Product Trends
+  const monthlyPriceIndex = useMemo(() => {
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
     
+    // Base template with realistic historical defaults
+    const data = [
+      { month: "JAN", tapioca: 610, sweetPotato: 520, pumpkin: 710, pearls: 650, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "FEB", tapioca: 630, sweetPotato: 540, pumpkin: 730, pearls: 660, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "MAR", tapioca: 645, sweetPotato: 580, pumpkin: 720, pearls: 690, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "APR", tapioca: 670, sweetPotato: 570, pumpkin: 750, pearls: 710, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "MAY", tapioca: 690, sweetPotato: 610, pumpkin: 780, pearls: 730, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "JUN", tapioca: 720, sweetPotato: 640, pumpkin: 810, pearls: 760, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } }
+    ];
+
+    // Aggregate live database shipments if available
     filteredShipmentsForCharts.forEach(s => {
       if (!s.etd_date) return;
-      const d = new Date(s.etd_date);
-      const day = d.getDate();
+      const monthIdx = new Date(s.etd_date).getMonth();
+      if (monthIdx < 0 || monthIdx > 5) return; // Only JAN-JUN
+      
       const vol = s.weight_mt || s.quantity_tons || 0;
       const val = s.contract_value || 0;
       if (vol <= 0 || val <= 0) return;
       const unitPrice = val / vol;
-      
-      const weekIdx = Math.min(Math.floor((day - 1) / 7), 4);
-      weekData[weekIdx].totalPrice += unitPrice;
-      weekData[weekIdx].count += 1;
+
+      const prod = s.product_info || "";
+      let key: "tapioca" | "sweetPotato" | "pumpkin" | "pearls" | null = null;
+      if (prod.includes("Tapioca Flour Extra")) key = "tapioca";
+      else if (prod.includes("Sweet Potato")) key = "sweetPotato";
+      else if (prod.includes("Pumpkin Flour")) key = "pumpkin";
+      else if (prod.includes("Tapioca Pearls")) key = "pearls";
+
+      if (key) {
+        data[monthIdx].sums[key] += unitPrice;
+        data[monthIdx].counts[key] += 1;
+      }
     });
-    
-    return weekData.map(w => ({
-      week: w.week,
-      price: w.count > 0 ? Math.round(w.totalPrice / w.count) : w.defaultVal
+
+    // Compute averages, falling back to defaults if no live data
+    return data.map(m => ({
+      month: m.month,
+      tapioca: m.counts.tapioca > 0 ? Math.round(m.sums.tapioca / m.counts.tapioca) : m.tapioca,
+      sweetPotato: m.counts.sweetPotato > 0 ? Math.round(m.sums.sweetPotato / m.counts.sweetPotato) : m.sweetPotato,
+      pumpkin: m.counts.pumpkin > 0 ? Math.round(m.sums.pumpkin / m.counts.pumpkin) : m.pumpkin,
+      pearls: m.counts.pearls > 0 ? Math.round(m.sums.pearls / m.counts.pearls) : m.pearls
     }));
   }, [filteredShipmentsForCharts]);
 
@@ -635,10 +654,10 @@ function ManagerPortalContent() {
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Chart 1: Monthly Export Volume */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[380px]">
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Monthly Export Volume (MT)</h4>
-                <div className="w-full h-48 flex items-end justify-between px-2 pt-2 pb-6 border-b border-slate-900/60 relative">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4 text-[#1A2B49] dark:text-slate-400">Monthly Export Volume (MT)</h4>
+                <div className="w-full h-[300px] flex items-end justify-between px-2 pt-2 pb-6 border-b border-slate-200/40 dark:border-slate-900/60 relative">
                   {(() => {
                     const maxVol = Math.max(...monthlyVolumes.map(mv => mv.vol), 1);
                     return monthlyVolumes.map((item, idx) => {
@@ -649,10 +668,10 @@ function ManagerPortalContent() {
                             {item.vol.toFixed(1)} MT
                           </div>
                           <div 
-                            className="w-8 rounded-t bg-gradient-to-t from-blue-600 via-cyan-500 to-cyan-400 transition-all duration-500 group-hover:from-blue-500 group-hover:to-cyan-300 shadow-md shadow-cyan-500/10"
+                            className="w-8 rounded-t bg-gradient-to-t from-[#059669] to-[#10b981] group-hover:from-[#047857] group-hover:to-[#34d399] transition-all duration-500 shadow-md shadow-emerald-500/10"
                             style={{ height: `${Math.max(pct, 5)}%` }}
                           ></div>
-                          <span className="absolute top-full mt-1.5 font-mono text-[9px] font-bold text-slate-500 group-hover:text-slate-300 tracking-wider">
+                          <span className="absolute top-full mt-1.5 font-mono text-[9px] font-bold text-[#1A2B49] dark:text-slate-500 group-hover:text-[#1d4ed8] dark:group-hover:text-slate-350 tracking-wider">
                             {item.month.toUpperCase()}
                           </span>
                         </div>
@@ -664,9 +683,9 @@ function ManagerPortalContent() {
             </div>
 
             {/* Chart 2: Shipment Type Share */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[380px]">
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Shipment Type Share (MT)</h4>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4 text-[#1A2B49] dark:text-slate-400">Shipment Type Share (MT)</h4>
                 <div className="flex flex-col sm:flex-row items-center justify-around gap-6 h-48 py-2">
                   <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
@@ -723,72 +742,190 @@ function ManagerPortalContent() {
               </div>
             </div>
 
-            {/* Chart 3: Weekly Price Index */}
-            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+            {/* Chart 3: Monthly Price Index */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[380px]">
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Weekly Price Index ($/MT)</h4>
-                <div className="w-full h-48 relative border-b border-slate-900/60 pt-4 pb-6 px-1 flex items-end">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4 text-[#1A2B49] dark:text-slate-400">Monthly Price Index ($/MT)</h4>
+                <div className="w-full h-[300px] relative border-b border-slate-200/40 dark:border-slate-900/60 pt-4 pb-6 px-1 flex items-end">
                   {(() => {
-                    const prices = weeklyPriceIndex.map(wp => wp.price);
-                    const maxPrice = Math.max(...prices, 1);
-                    const minPrice = Math.min(...prices, 0) * 0.9;
-                    const range = maxPrice - minPrice;
-                    
-                    const points = weeklyPriceIndex.map((wp, idx) => {
-                      const x = (idx / 4) * 100;
-                      const y = 100 - ((wp.price - minPrice) / range) * 80;
-                      return { x, y, label: wp.week, val: wp.price };
-                    });
-                    
-                    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-                    const areaPath = `${linePath} L 100 100 L 0 100 Z`;
-                    
+                    const getPoints = (key: 'tapioca' | 'sweetPotato' | 'pumpkin' | 'pearls') => {
+                      return monthlyPriceIndex.map((m, idx) => {
+                        const x = (idx / 5) * 100;
+                        const price = m[key];
+                        const y = 90 - ((price - 400) / 500) * 80;
+                        return { x, y, val: price, month: m.month };
+                      });
+                    };
+
+                    const tapiocaPoints = getPoints('tapioca');
+                    const sweetPotatoPoints = getPoints('sweetPotato');
+                    const pumpkinPoints = getPoints('pumpkin');
+                    const pearlsPoints = getPoints('pearls');
+
+                    const linePath = (pts: typeof tapiocaPoints) => pts.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+                    const areaPath = (pts: typeof tapiocaPoints) => `${linePath(pts)} L 100 100 L 0 100 Z`;
+
                     return (
                       <div className="w-full h-full relative">
+                        {/* Hover Tooltip Overlay */}
+                        {hoveredMonthIdx !== null && (
+                          <div 
+                            className="absolute bg-slate-950/95 dark:bg-slate-900/95 border border-slate-850 dark:border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur z-20 pointer-events-none select-none transition-all duration-150 ease-out"
+                            style={{
+                              left: `${(hoveredMonthIdx / 5) * 100}%`,
+                              top: '0px',
+                              transform: hoveredMonthIdx > 3 ? 'translateX(-105%)' : hoveredMonthIdx < 2 ? 'translateX(5%)' : 'translateX(-50%)',
+                            }}
+                          >
+                            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest font-mono mb-2">
+                              {monthlyPriceIndex[hoveredMonthIdx].month} Price Dossier
+                            </div>
+                            <div className="space-y-1.5 text-[11px] font-mono">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                  Tapioca:
+                                </span>
+                                <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].tapioca}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-purple-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                  Sweet Potato:
+                                </span>
+                                <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].sweetPotato}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  Pumpkin:
+                                </span>
+                                <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].pumpkin}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-teal-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                                  Pearls:
+                                </span>
+                                <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].pearls}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
                           <defs>
-                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.15" />
-                              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                            <linearGradient id="tapiocaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                            </linearGradient>
+                            <linearGradient id="sweetPotatoGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+                            </linearGradient>
+                            <linearGradient id="pumpkinGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                            </linearGradient>
+                            <linearGradient id="pearlsGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
                             </linearGradient>
                           </defs>
-                          <line x1="0" y1="20" x2="100" y2="20" className="stroke-slate-900/20" strokeWidth="0.5" />
-                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-900/20" strokeWidth="0.5" />
-                          <line x1="0" y1="80" x2="100" y2="80" className="stroke-slate-900/20" strokeWidth="0.5" />
 
-                          <path d={areaPath} fill="url(#areaGrad)" className="transition-all duration-500" />
-                          <path d={linePath} fill="none" className="stroke-cyan-400 transition-all duration-500" strokeWidth="1.5" />
-                          {points.map((p, idx) => (
-                            <circle
-                              key={idx}
-                              cx={p.x}
-                              cy={p.y}
-                              r="1.8"
-                              className="fill-cyan-400 stroke-cyan-300 stroke-[0.8] hover:r-[3] hover:fill-white transition-all cursor-pointer"
+                          {/* Grid Lines */}
+                          <line x1="0" y1="10" x2="100" y2="10" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
+                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
+                          <line x1="0" y1="90" x2="100" y2="90" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
+
+                          {/* 4 Area Fills */}
+                          <path d={areaPath(tapiocaPoints)} fill="url(#tapiocaGrad)" className="transition-all duration-500" />
+                          <path d={areaPath(sweetPotatoPoints)} fill="url(#sweetPotatoGrad)" className="transition-all duration-500" />
+                          <path d={areaPath(pumpkinPoints)} fill="url(#pumpkinGrad)" className="transition-all duration-500" />
+                          <path d={areaPath(pearlsPoints)} fill="url(#pearlsGrad)" className="transition-all duration-500" />
+
+                          {/* 4 Line Strokes */}
+                          <path d={linePath(tapiocaPoints)} fill="none" className="stroke-blue-500 transition-all duration-500" strokeWidth="1.5" />
+                          <path d={linePath(sweetPotatoPoints)} fill="none" className="stroke-purple-500 transition-all duration-500" strokeWidth="1.5" />
+                          <path d={linePath(pumpkinPoints)} fill="none" className="stroke-amber-500 transition-all duration-500" strokeWidth="1.5" />
+                          <path d={linePath(pearlsPoints)} fill="none" className="stroke-teal-500 transition-all duration-500" strokeWidth="1.5" />
+
+                          {/* Hover Guideline */}
+                          {hoveredMonthIdx !== null && (
+                            <line 
+                              x1={(hoveredMonthIdx / 5) * 100} 
+                              y1="0" 
+                              x2={(hoveredMonthIdx / 5) * 100} 
+                              y2="100" 
+                              className="stroke-slate-400/40 dark:stroke-slate-800/40" 
+                              strokeDasharray="2" 
+                              strokeWidth="0.8" 
                             />
-                          ))}
-                        </svg>
-                        
-                        {points.map((p, idx) => (
-                          <div 
-                            key={idx} 
-                            className="absolute flex flex-col items-center group pointer-events-none"
-                            style={{ left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%, -120%)" }}
-                          >
-                            <span className="bg-slate-950 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-md">
-                              ${p.val}
-                            </span>
-                          </div>
-                        ))}
+                          )}
 
+                          {/* Circular Nodes */}
+                          {monthlyPriceIndex.map((_, idx) => {
+                            const showActive = hoveredMonthIdx === idx;
+                            return (
+                              <g key={idx} className="transition-all duration-150">
+                                <circle cx={tapiocaPoints[idx].x} cy={tapiocaPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-blue-500 stroke-blue-300 stroke-[0.5]" />
+                                <circle cx={sweetPotatoPoints[idx].x} cy={sweetPotatoPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-purple-500 stroke-purple-300 stroke-[0.5]" />
+                                <circle cx={pumpkinPoints[idx].x} cy={pumpkinPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-amber-500 stroke-amber-300 stroke-[0.5]" />
+                                <circle cx={pearlsPoints[idx].x} cy={pearlsPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-teal-500 stroke-teal-300 stroke-[0.5]" />
+                              </g>
+                            );
+                          })}
+
+                          {/* Invisible Trigger rects for hover interaction */}
+                          {monthlyPriceIndex.map((_, idx) => {
+                            const w = 100 / 5;
+                            const x = idx === 0 ? 0 : (idx / 5) * 100 - w / 2;
+                            const rectWidth = idx === 0 || idx === 5 ? w / 2 : w;
+                            return (
+                              <rect
+                                key={idx}
+                                x={x}
+                                y="0"
+                                width={rectWidth}
+                                height="100"
+                                fill="transparent"
+                                className="cursor-pointer pointer-events-auto"
+                                onMouseEnter={() => setHoveredMonthIdx(idx)}
+                                onMouseLeave={() => setHoveredMonthIdx(null)}
+                              />
+                            );
+                          })}
+                        </svg>
+
+                        {/* X-Axis Labels */}
                         <div className="absolute top-[102%] w-full flex justify-between px-0.5 text-slate-500 text-[9px] font-bold font-mono">
-                          {weeklyPriceIndex.map((item, idx) => (
-                            <span key={idx} className="tracking-wider uppercase select-none">{item.week}</span>
+                          {monthlyPriceIndex.map((item, idx) => (
+                            <span key={idx} className="tracking-wider uppercase select-none text-[#1A2B49] dark:text-slate-500">{item.month}</span>
                           ))}
                         </div>
                       </div>
                     );
                   })()}
+                </div>
+
+                {/* Legend Below Chart */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mt-6 pt-4 border-t border-slate-200/40 dark:border-slate-900/40 text-[9px] sm:text-[10px] font-bold select-none">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-blue-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Tapioca Flour Extra</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-purple-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Sweet Potato Powder</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-amber-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Pumpkin Flour Organic</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-teal-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Tapioca Pearls Premium</span>
+                  </div>
                 </div>
               </div>
             </div>
