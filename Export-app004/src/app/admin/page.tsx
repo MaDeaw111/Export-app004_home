@@ -913,7 +913,7 @@ function AdminPortalContent() {
                   const isPhysPulse = shipStatus !== "eta";
 
                   return (
-                    <div className="relative w-full pt-2 pb-14 px-8">
+                    <div className="relative w-full pt-2 pb-12 px-8">
                       {/* Background Track Line */}
                       <div className="absolute top-[18px] left-8 right-8 h-[2px] bg-slate-800/80 rounded-full z-0">
                         {/* Active Progress Line */}
@@ -952,7 +952,7 @@ function AdminPortalContent() {
                                 )}
                               </div>
                               {/* Absolute Label below node */}
-                              <div className="absolute top-8 left-1/2 whitespace-nowrap transform rotate-[28deg] origin-top-left translate-y-1.5">
+                              <div className="absolute top-8 left-1/2 -translate-x-1/2 w-16 text-center">
                                 <span 
                                   className={`text-[9px] sm:text-[10px] font-bold font-mono uppercase tracking-wider transition-colors duration-300 ${
                                     isActive 
@@ -1026,7 +1026,7 @@ function AdminPortalContent() {
                   const clampedDocIndex = Math.min(activeDocIndex, docStages.length - 1);
 
                   return (
-                    <div className="relative w-full pt-2 pb-14 px-8">
+                    <div className="relative w-full pt-2 pb-12 px-8">
                       {/* Background Track Line */}
                       <div className="absolute top-[18px] left-8 right-8 h-[2px] bg-slate-800/80 rounded-full z-0">
                         {/* Active Progress Line */}
@@ -1065,7 +1065,7 @@ function AdminPortalContent() {
                                 )}
                               </div>
                               {/* Absolute Label below node */}
-                              <div className="absolute top-8 left-1/2 whitespace-nowrap transform rotate-[28deg] origin-top-left translate-y-1.5">
+                              <div className="absolute top-8 left-1/2 -translate-x-1/2 w-16 text-center">
                                 <span 
                                   className={`text-[9px] sm:text-[10px] font-bold font-mono uppercase tracking-wider transition-colors duration-300 ${
                                     isActive 
