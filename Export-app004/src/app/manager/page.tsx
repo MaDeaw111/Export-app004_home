@@ -56,7 +56,6 @@ function ManagerPortalContent() {
   const [activeMonthSlicer, setActiveMonthSlicer] = useState("all");
   const [activeTypeSlicer, setActiveTypeSlicer] = useState("all");
   const [activeProductSlicer, setActiveProductSlicer] = useState("all");
-  const [activeOwnerSlicer, setActiveOwnerSlicer] = useState("all");
 
   // Retrieve customer name for a shipment (Declared at the top to resolve runtime ReferenceError)
   const getCustomerName = (poNo: string) => {
@@ -203,17 +202,9 @@ function ManagerPortalContent() {
         if (prod !== activeProductSlicer) return false;
       }
       
-      // Owner/PIC Filter
-      if (activeOwnerSlicer !== "all") {
-        let pic = "Ae";
-        if (s.po_no.startsWith("PO-2603")) pic = "Depper";
-        else if (s.po_no.startsWith("PO-2604")) pic = "Pai";
-        if (pic !== activeOwnerSlicer) return false;
-      }
-      
       return true;
     });
-  }, [shipments, activeMonthSlicer, activeTypeSlicer, activeProductSlicer, activeOwnerSlicer, purchaseOrders, customers]);
+  }, [shipments, activeMonthSlicer, activeTypeSlicer, activeProductSlicer, purchaseOrders, customers]);
 
   // Chart 1: Monthly Export Volume (MT)
   const monthlyVolumes = useMemo(() => {
@@ -638,26 +629,6 @@ function ManagerPortalContent() {
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
-            </div>
-
-            {/* PIC/Owner Slicer */}
-            <div className="flex items-center gap-2 pl-4 border-l border-slate-900/60">
-              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest font-mono">Owner:</span>
-              <div className="flex gap-1.5">
-                {["all", "Ae", "Depper", "Pai"].map(o => (
-                  <button
-                    key={o}
-                    onClick={() => setActiveOwnerSlicer(o)}
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all cursor-pointer border ${
-                      activeOwnerSlicer === o
-                        ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-300 shadow-sm"
-                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    {o === "all" ? "All" : o}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
