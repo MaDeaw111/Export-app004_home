@@ -510,63 +510,84 @@ function ManagerPortalContent() {
               </defs>
               <rect width="1000" height="500" fill="url(#gridPattern)" />
 
-              {/* Vector outlines of main continents */}
-              {/* North America */}
+              {/* Vector outlines of main continents - Detailed political cartography */}
+              {/* Eurasia (Europe + Asia) */}
               <path 
-                d="M 60,80 L 110,60 L 260,60 L 300,90 L 320,130 L 290,170 L 310,210 L 280,240 L 250,220 L 225,270 L 215,270 L 210,230 L 170,215 L 120,220 L 100,160 L 80,160 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 430,200 C 430,190 420,180 415,160 C 410,140 405,120 420,120 C 435,120 445,100 450,110 C 455,120 470,110 480,105 C 490,100 500,90 510,95 C 520,100 535,80 545,85 C 555,90 570,75 580,75 C 590,75 600,60 615,65 C 630,70 650,55 670,60 C 690,65 710,50 730,55 C 750,60 770,55 790,60 C 810,65 830,60 850,70 C 870,80 890,75 910,80 C 930,85 950,90 960,110 C 970,130 955,145 945,150 C 935,155 920,170 910,185 C 900,200 880,185 870,185 C 860,185 850,210 840,225 C 830,240 810,240 800,250 C 790,260 795,280 785,290 C 775,300 770,320 755,320 C 740,320 735,290 735,260 C 735,230 705,250 690,260 C 675,270 650,260 640,265 C 630,270 615,255 600,250 C 585,245 570,240 555,240 C 540,240 515,230 485,220 C 455,210 440,210 430,200 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
               
-              {/* Greenland */}
+              {/* North America */}
               <path 
-                d="M 330,50 L 390,30 L 410,75 L 350,90 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 60,80 C 75,75 90,70 110,60 C 130,50 160,50 180,60 C 200,70 230,55 250,60 C 270,65 290,80 300,90 C 310,100 325,120 320,130 C 315,140 295,160 290,170 C 285,180 305,200 310,210 C 315,220 290,230 280,240 C 270,250 260,230 250,220 C 240,210 230,245 225,270 C 220,295 215,270 215,270 C 215,270 210,230 210,230 C 210,230 170,215 170,215 C 170,215 140,225 120,220 C 100,215 100,180 100,160 C 100,140 75,165 60,150 C 45,135 45,95 60,80 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
               
               {/* South America */}
               <path 
-                d="M 225,275 L 260,285 L 290,310 L 320,350 L 300,430 L 280,480 L 265,480 L 250,400 L 220,330 L 215,300 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 225,275 C 235,275 250,280 260,285 C 270,290 285,300 290,310 C 295,320 315,340 320,350 C 325,360 305,400 300,430 C 295,460 285,475 280,480 C 275,485 265,480 265,480 C 265,480 250,440 250,400 C 250,360 230,345 220,330 C 210,315 215,300 215,300 C 215,300 215,275 225,275 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
               
               {/* Africa */}
               <path 
-                d="M 440,250 L 485,220 L 530,220 L 555,245 L 600,290 L 585,350 L 570,390 L 545,430 L 535,430 L 515,360 L 480,310 L 440,295 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
-                strokeWidth="1" 
-              />
-              
-              {/* Eurasia (Europe + Asia) */}
-              <path 
-                d="M 430,200 L 420,130 L 450,110 L 500,90 L 560,70 L 640,60 L 740,65 L 850,70 L 920,80 L 960,110 L 945,150 L 910,185 L 880,185 L 850,225 L 810,240 L 795,290 L 775,320 L 755,300 L 735,260 L 690,260 L 640,265 L 590,245 L 555,240 L 485,220 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 440,250 C 455,240 470,230 485,220 C 500,210 520,215 530,220 C 540,225 550,235 555,245 C 560,255 580,270 600,290 C 620,310 600,335 585,350 C 570,365 575,380 570,390 C 565,400 550,420 545,430 C 540,440 535,430 535,430 C 535,430 525,400 515,360 C 505,320 495,315 480,310 C 465,305 450,300 440,295 C 430,290 425,260 440,250 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
               
               {/* Australia */}
               <path 
-                d="M 810,380 L 870,370 L 910,390 L 890,440 L 830,430 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 810,380 C 830,375 850,365 870,370 C 890,375 905,385 910,390 C 915,395 900,420 890,440 C 880,460 850,445 830,430 C 810,415 790,385 810,380 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
               
-              {/* Islands */}
+              {/* Greenland */}
               <path 
-                d="M 875,150 L 885,160 L 880,185 L 870,175 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 330,50 C 350,40 370,35 390,30 C 410,25 415,60 410,75 C 405,90 380,85 350,90 C 320,95 310,60 330,50 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
+
+              {/* Major Islands chains for high cartographic fidelity */}
+              {/* Japan Archipelago */}
               <path 
-                d="M 445,115 L 455,105 L 450,125 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 870,145 C 872,140 878,142 880,148 C 882,154 880,165 875,170 C 870,175 865,185 862,180 C 859,175 865,160 868,155 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
+              {/* Great Britain & Ireland */}
               <path 
-                d="M 590,380 L 600,400 L 595,410 Z" 
-                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                d="M 445,115 C 448,110 452,108 455,112 C 458,116 455,124 452,126 C 449,128 442,120 445,115 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
+                strokeWidth="1" 
+              />
+              {/* Madagascar */}
+              <path 
+                d="M 590,380 C 593,375 598,385 600,400 C 602,415 598,418 595,410 C 592,402 587,385 590,380 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
+                strokeWidth="1" 
+              />
+              {/* Iceland */}
+              <path 
+                d="M 425,75 C 430,72 435,74 433,78 C 431,82 423,84 421,80 C 419,76 420,78 425,75 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
+                strokeWidth="1" 
+              />
+              {/* Indonesia & Malaysia (Archipelago) */}
+              <path 
+                d="M 760,295 C 770,290 780,295 785,305 C 790,315 782,325 770,320 C 758,315 750,300 760,295 Z M 800,310 C 810,305 820,310 825,320 C 830,330 820,340 805,335 C 790,330 790,315 800,310 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
+                strokeWidth="1" 
+              />
+              {/* New Zealand (North & South Islands) */}
+              <path 
+                d="M 915,445 C 918,440 922,442 925,448 C 928,454 924,460 918,455 C 912,450 912,450 915,445 Z" 
+                className="fill-slate-900/40 dark:fill-slate-800/20 stroke-slate-800/50 dark:stroke-slate-900/50 transition-colors duration-300" 
                 strokeWidth="1" 
               />
 
