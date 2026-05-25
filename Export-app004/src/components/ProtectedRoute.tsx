@@ -6,7 +6,7 @@ import { getCurrentUser, UserProfile } from "@/utils/supabaseClient";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRole: "admin" | "customer";
+  allowedRole: "admin" | "customer" | "manager";
 }
 
 export default function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {

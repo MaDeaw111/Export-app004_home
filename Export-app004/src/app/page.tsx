@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent, customEmail?: string, forceRole?: "admin" | "customer") => {
+  const handleLogin = async (e: React.FormEvent, customEmail?: string, forceRole?: "admin" | "customer" | "manager") => {
     if (e) e.preventDefault();
     setLoading(true);
     setError("");
@@ -26,18 +26,22 @@ export default function LoginPage() {
 
     try {
       // Determine simulated role based on email or forced parameter
-      let role: "admin" | "customer" = "customer";
+      let role: "admin" | "customer" | "manager" = "customer";
       if (forceRole) {
         role = forceRole;
       } else if (targetEmail.toLowerCase().includes("admin")) {
         role = "admin";
+      } else if (targetEmail.toLowerCase().includes("manager")) {
+        role = "manager";
       }
 
-      const profile = await loginUser(targetEmail, role);
+      const profile = await loginUser(targetEmail, role as any);
       
       // Redirect based on role
       if (profile.role === "admin") {
         router.push("/admin");
+      } else if (profile.role === "manager") {
+        router.push("/manager");
       } else {
         router.push("/client");
       }
@@ -48,7 +52,7 @@ export default function LoginPage() {
     }
   };
 
-  const triggerQuickLogin = (demoEmail: string, role: "admin" | "customer") => {
+  const triggerQuickLogin = (demoEmail: string, role: "admin" | "customer" | "manager") => {
     setEmail(demoEmail);
     handleLogin(null as any, demoEmail, role);
   };
@@ -178,6 +182,21 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+              </button>
+
+              <button
+                onClick={() => triggerQuickLogin("manager@track.com", "manager")}
+                className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/80 border border-slate-900 hover:border-slate-800 transition-all group text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <div>
+                    <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                      Global Operations Manager <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                    </div>
+                    <div className="text-[10px] text-slate-500">manager@track.com</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
               </button>
             </div>
           </div>

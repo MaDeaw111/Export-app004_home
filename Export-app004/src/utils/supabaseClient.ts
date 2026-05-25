@@ -17,7 +17,7 @@ export interface UserProfile {
   id: string;
   email: string;
   company_name: string;
-  role: "admin" | "customer";
+  role: "admin" | "customer" | "manager";
 }
 
 export interface Customer {
@@ -70,6 +70,10 @@ export interface Shipment {
   loading_splits?: Array<{ date: string; qty: number }> | null;
   doc_status?: "get_booking" | "preparing_docs" | "confirm_bl" | "bl_stage" | "confirm_draft_docs" | "all_ship_docs_completed" | null;
   shipment_type?: "container" | "bulk" | "domestic" | null;
+  product_info?: string | null;
+  weight_mt?: number | null;
+  contract_value?: number | null;
+  destination_country?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -125,52 +129,52 @@ const MOCK_POS: PurchaseOrder[] = [
 
 const MOCK_SHIPMENTS: Shipment[] = [
   // Apex PO-2601-A DIs (Seeding initial ETD dates to demonstrate Green state capacity)
-  { di_no: "DI-2601-A1", po_no: "PO-2601-A", status: "pending_production", product_id: "PROD-AUSTENITE-22", quantity_tons: 50.000, invoice_no: "WCAT001", container_size: "40'", container_qty: 1, etd_date: "2026-05-25", doc_status: "preparing_docs", shipment_type: "container" },
-  { di_no: "DI-2601-A2", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-AUSTENITE-22", quantity_tons: 25.500, container_no: "MSCU9827361", seal_no: "SEAL-992837", forwarder_id: "Maersk Logistics", vessel_voyage: "MAERSK MC-KINNEY MØLLER / Voyage 2601W", etd_date: "2026-05-26", eta_date: "2026-06-20", booking_no: "BK-2601-99", invoice_no: "WCAT002", container_size: "40'", container_qty: 2, doc_status: "bl_stage", shipment_type: "container" },
-  { di_no: "DI-2601-A3", po_no: "PO-2601-A", status: "awaiting_bl_confirmation", product_id: "PROD-SPECIAL-09", quantity_tons: 40.000, container_no: "CMAU2819283", seal_no: "SEAL-228192", forwarder_id: "CMA CGM", vessel_voyage: "CMA CGM MARCO POLO / Voyage 2602E", etd_date: "2026-05-28", eta_date: "2026-06-15", bl_draft_link: "https://example.com/drafts/bl-2601-a3.pdf", bl_approval_status: "pending", booking_no: "BK-2601-88", invoice_no: "WCAT003", container_size: "Bulk Vessel", container_qty: 3, doc_status: "confirm_draft_docs", shipment_type: "bulk" },
-  { di_no: "DI-2601-A4", po_no: "PO-2601-A", status: "eta", product_id: "PROD-SPECIAL-09", quantity_tons: 20.000, container_no: "OOCL8827182", seal_no: "SEAL-882736", forwarder_id: "OOCL", vessel_voyage: "OOCL HONG KONG / Voyage 2603N", etd_date: "2026-06-01", eta_date: "2026-06-12", bl_draft_link: "https://example.com/drafts/bl-approved.pdf", shipping_docs_link: "https://example.com/docs/shipping-docs-2601-a4.zip", bl_approval_status: "approved", bl_feedback: "Draft looks perfect! Passed inspection.", booking_no: "BK-2601-77", invoice_no: "WCAT004", container_size: "Bulk Vessel", container_qty: 2, doc_status: "all_ship_docs_completed", shipment_type: "bulk" },
+  { di_no: "DI-2601-A1", po_no: "PO-2601-A", status: "pending_production", product_id: "PROD-AUSTENITE-22", quantity_tons: 50.000, invoice_no: "WCAT001", container_size: "40'", container_qty: 1, etd_date: "2026-05-25", doc_status: "preparing_docs", shipment_type: "container", product_info: "Tapioca Flour Extra", weight_mt: 50.000, contract_value: 32500, destination_country: "United States" },
+  { di_no: "DI-2601-A2", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-AUSTENITE-22", quantity_tons: 25.500, container_no: "MSCU9827361", seal_no: "SEAL-992837", forwarder_id: "Maersk Logistics", vessel_voyage: "MAERSK MC-KINNEY MØLLER / Voyage 2601W", etd_date: "2026-05-26", eta_date: "2026-06-20", booking_no: "BK-2601-99", invoice_no: "WCAT002", container_size: "40'", container_qty: 2, doc_status: "bl_stage", shipment_type: "container", product_info: "Sweet Potato Powder", weight_mt: 25.500, contract_value: 18000, destination_country: "United States" },
+  { di_no: "DI-2601-A3", po_no: "PO-2601-A", status: "awaiting_bl_confirmation", product_id: "PROD-SPECIAL-09", quantity_tons: 40.000, container_no: "CMAU2819283", seal_no: "SEAL-228192", forwarder_id: "CMA CGM", vessel_voyage: "CMA CGM MARCO POLO / Voyage 2602E", etd_date: "2026-05-28", eta_date: "2026-06-15", bl_draft_link: "https://example.com/drafts/bl-2601-a3.pdf", bl_approval_status: "pending", booking_no: "BK-2601-88", invoice_no: "WCAT003", container_size: "Bulk Vessel", container_qty: 3, doc_status: "confirm_draft_docs", shipment_type: "bulk", product_info: "Tapioca Pearls Premium", weight_mt: 40.000, contract_value: 29000, destination_country: "Germany" },
+  { di_no: "DI-2601-A4", po_no: "PO-2601-A", status: "eta", product_id: "PROD-SPECIAL-09", quantity_tons: 20.000, container_no: "OOCL8827182", seal_no: "SEAL-882736", forwarder_id: "OOCL", vessel_voyage: "OOCL HONG KONG / Voyage 2603N", etd_date: "2026-06-01", eta_date: "2026-06-12", bl_draft_link: "https://example.com/drafts/bl-approved.pdf", shipping_docs_link: "https://example.com/docs/shipping-docs-2601-a4.zip", bl_approval_status: "approved", bl_feedback: "Draft looks perfect! Passed inspection.", booking_no: "BK-2601-77", invoice_no: "WCAT004", container_size: "Bulk Vessel", container_qty: 2, doc_status: "all_ship_docs_completed", shipment_type: "bulk", product_info: "Pumpkin Flour Organic", weight_mt: 20.000, contract_value: 15500, destination_country: "Singapore" },
   
   // Vortex PO-2603-C DIs
-  { di_no: "DI-2603-C1", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 100.000, forwarder_id: "DHL Global", vessel_voyage: "MV. COSCO SHIPPING / V.240E", etd_date: "2026-05-29", eta_date: "2026-06-30", invoice_no: "WCAT006", container_size: "Truck", container_qty: 4, shipment_type: "domestic" },
-  { di_no: "DI-2603-C2", po_no: "PO-2603-C", status: "awaiting_all_docs", product_id: "PROD-SPECIAL-09", quantity_tons: 150.000, container_no: "HLXU1182736", seal_no: "SEAL-110293", forwarder_id: "Hapag-Lloyd", vessel_voyage: "HAPAG-LLOYD AL DAHNA / Voyage 2605W", etd_date: "2026-06-10", eta_date: "2026-06-25", bl_draft_link: "https://example.com/drafts/bl-vortex-approved.pdf", bl_approval_status: "approved", bl_feedback: "B/L confirmed by Hans Müller.", booking_no: "BK-2603-12", invoice_no: "WCAT007", container_size: "Truck", container_qty: 2, shipment_type: "domestic" },
+  { di_no: "DI-2603-C1", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 100.000, forwarder_id: "DHL Global", vessel_voyage: "MV. COSCO SHIPPING / V.240E", etd_date: "2026-05-29", eta_date: "2026-06-30", invoice_no: "WCAT006", container_size: "Truck", container_qty: 4, shipment_type: "domestic", product_info: "Tapioca Flour Extra", weight_mt: 100.000, contract_value: 65000, destination_country: "Germany" },
+  { di_no: "DI-2603-C2", po_no: "PO-2603-C", status: "awaiting_all_docs", product_id: "PROD-SPECIAL-09", quantity_tons: 150.000, container_no: "HLXU1182736", seal_no: "SEAL-110293", forwarder_id: "Hapag-Lloyd", vessel_voyage: "HAPAG-LLOYD AL DAHNA / Voyage 2605W", etd_date: "2026-06-10", eta_date: "2026-06-25", bl_draft_link: "https://example.com/drafts/bl-vortex-approved.pdf", bl_approval_status: "approved", bl_feedback: "B/L confirmed by Hans Müller.", booking_no: "BK-2603-12", invoice_no: "WCAT007", container_size: "Truck", container_qty: 2, shipment_type: "domestic", product_info: "Sweet Potato Powder", weight_mt: 150.000, contract_value: 98000, destination_country: "Singapore" },
 
   // Vortex Special 09 20' Container Row (Mixed)
-  { di_no: "DI-2603-C7", po_no: "PO-2603-C", status: "etd", product_id: "PROD-SPECIAL-09", quantity_tons: 15.000, container_no: "ONEU7728362", seal_no: "SEAL-773829", forwarder_id: "ONE Line", vessel_voyage: "ONE APUS / Voyage 2606E", etd_date: "2026-05-30", eta_date: "2026-06-02", bl_draft_link: "https://example.com/drafts/bl-oceanic.pdf", shipping_docs_link: "https://example.com/docs/oceanic-docs.zip", bl_approval_status: "approved", booking_no: "BK-2604-04", invoice_no: "WCAT008", container_size: "20'", container_qty: 2, shipment_type: "container" },
+  { di_no: "DI-2603-C7", po_no: "PO-2603-C", status: "etd", product_id: "PROD-SPECIAL-09", quantity_tons: 15.000, container_no: "ONEU7728362", seal_no: "SEAL-773829", forwarder_id: "ONE Line", vessel_voyage: "ONE APUS / Voyage 2606E", etd_date: "2026-05-30", eta_date: "2026-06-02", bl_draft_link: "https://example.com/drafts/bl-oceanic.pdf", shipping_docs_link: "https://example.com/docs/oceanic-docs.zip", bl_approval_status: "approved", booking_no: "BK-2604-04", invoice_no: "WCAT008", container_size: "20'", container_qty: 2, shipment_type: "container", product_info: "Pumpkin Flour Organic", weight_mt: 15.000, contract_value: 11000, destination_country: "Japan" },
 
   // Apex PO-2602-B DIs
-  { di_no: "DI-2602-B1", po_no: "PO-2602-B", status: "pending_packaging", product_id: "PROD-NICKEL-88", quantity_tons: 12.000, invoice_no: "WCAT005", container_size: "40'", container_qty: 3, etd_date: "2026-05-27", shipment_type: "container" },
+  { di_no: "DI-2602-B1", po_no: "PO-2602-B", status: "pending_packaging", product_id: "PROD-NICKEL-88", quantity_tons: 12.000, invoice_no: "WCAT005", container_size: "40'", container_qty: 3, etd_date: "2026-05-27", shipment_type: "container", product_info: "Tapioca Flour Extra", weight_mt: 12.000, contract_value: 8500, destination_country: "China" },
 
   // ==========================================
   // HEATMAP SIMULATION DATA (May 2026)
   // ==========================================
 
   // Yellow Day 1: May 10, 2026 (7 containers loaded)
-  { di_no: "DI-2601-A5", po_no: "PO-2601-A", status: "awaiting_loading", product_id: "PROD-AUSTENITE-22", quantity_tons: 80.000, etd_date: "2026-05-10", booking_no: "BK-2601-05", invoice_no: "WCAT009", container_size: "40'", container_qty: 4 },
-  { di_no: "DI-2601-A6", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-FERRITIC-11", quantity_tons: 35.000, etd_date: "2026-05-10", booking_no: "BK-2601-06", invoice_no: "WCAT010", container_size: "20'", container_qty: 3 },
+  { di_no: "DI-2601-A5", po_no: "PO-2601-A", status: "awaiting_loading", product_id: "PROD-AUSTENITE-22", quantity_tons: 80.000, etd_date: "2026-05-10", booking_no: "BK-2601-05", invoice_no: "WCAT009", container_size: "40'", container_qty: 4, product_info: "Tapioca Flour Extra", weight_mt: 80.000, contract_value: 52000, destination_country: "United States" },
+  { di_no: "DI-2601-A6", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-FERRITIC-11", quantity_tons: 35.000, etd_date: "2026-05-10", booking_no: "BK-2601-06", invoice_no: "WCAT010", container_size: "20'", container_qty: 3, product_info: "Sweet Potato Powder", weight_mt: 35.000, contract_value: 24500, destination_country: "United States" },
 
   // Orange Day 1: May 12, 2026 (12 containers loaded)
-  { di_no: "DI-2601-A7", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-DUPLEX-05", quantity_tons: 100.000, etd_date: "2026-05-12", booking_no: "BK-2601-07", invoice_no: "WCAT011", container_size: "40' HQ", container_qty: 5 },
-  { di_no: "DI-2601-A8", po_no: "PO-2601-A", status: "awaiting_loading", product_id: "PROD-AUSTENITE-22", quantity_tons: 80.000, etd_date: "2026-05-12", booking_no: "BK-2601-08", invoice_no: "WCAT012", container_size: "40'", container_qty: 4 },
-  { di_no: "DI-2603-C3", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 45.000, etd_date: "2026-05-12", booking_no: "BK-2603-03", invoice_no: "WCAT013", container_size: "20'", container_qty: 3 },
+  { di_no: "DI-2601-A7", po_no: "PO-2601-A", status: "loaded_into_container", product_id: "PROD-DUPLEX-05", quantity_tons: 100.000, etd_date: "2026-05-12", booking_no: "BK-2601-07", invoice_no: "WCAT011", container_size: "40' HQ", container_qty: 5, product_info: "Tapioca Pearls Premium", weight_mt: 100.000, contract_value: 75000, destination_country: "Germany" },
+  { di_no: "DI-2601-A8", po_no: "PO-2601-A", status: "awaiting_loading", product_id: "PROD-AUSTENITE-22", quantity_tons: 80.000, etd_date: "2026-05-12", booking_no: "BK-2601-08", invoice_no: "WCAT012", container_size: "40'", container_qty: 4, product_info: "Pumpkin Flour Organic", weight_mt: 80.000, contract_value: 62000, destination_country: "Singapore" },
+  { di_no: "DI-2603-C3", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 45.000, etd_date: "2026-05-12", booking_no: "BK-2603-03", invoice_no: "WCAT013", container_size: "20'", container_qty: 3, product_info: "Tapioca Flour Extra", weight_mt: 45.000, contract_value: 29250, destination_country: "Germany" },
 
   // Yellow Day 2: May 15, 2026 (8 containers loaded)
-  { di_no: "DI-2603-C4", po_no: "PO-2603-C", status: "loaded_into_container", product_id: "PROD-SPECIAL-09", quantity_tons: 65.000, etd_date: "2026-05-15", booking_no: "BK-2603-04", invoice_no: "WCAT014", container_size: "20'", container_qty: 5 },
-  { di_no: "DI-2603-C5", po_no: "PO-2603-C", status: "awaiting_bl_confirmation", product_id: "PROD-SPECIAL-09", quantity_tons: 60.000, etd_date: "2026-05-15", booking_no: "BK-2603-05", invoice_no: "WCAT015", container_size: "40' HQ", container_qty: 3 },
+  { di_no: "DI-2603-C4", po_no: "PO-2603-C", status: "loaded_into_container", product_id: "PROD-SPECIAL-09", quantity_tons: 65.000, etd_date: "2026-05-15", booking_no: "BK-2603-04", invoice_no: "WCAT014", container_size: "20'", container_qty: 5, product_info: "Sweet Potato Powder", weight_mt: 65.000, contract_value: 45500, destination_country: "Singapore" },
+  { di_no: "DI-2603-C5", po_no: "PO-2603-C", status: "awaiting_bl_confirmation", product_id: "PROD-SPECIAL-09", quantity_tons: 60.000, etd_date: "2026-05-15", booking_no: "BK-2603-05", invoice_no: "WCAT015", container_size: "40' HQ", container_qty: 3, product_info: "Pumpkin Flour Organic", weight_mt: 60.000, contract_value: 46500, destination_country: "Japan" },
 
   // Orange Day 2: May 18, 2026 (14 containers loaded)
-  { di_no: "DI-2603-C6", po_no: "PO-2603-C", status: "eta", product_id: "PROD-SPECIAL-09", quantity_tons: 120.000, etd_date: "2026-05-18", booking_no: "BK-2603-06", invoice_no: "WCAT016", container_size: "40'", container_qty: 6 },
-  { di_no: "DI-2604-D2", po_no: "PO-2604-D", status: "etd", product_id: "PROD-TITANIUM-04", quantity_tons: 50.000, etd_date: "2026-05-18", booking_no: "BK-2604-02", invoice_no: "WCAT017", container_size: "20'", container_qty: 4 },
-  { di_no: "DI-2604-D3", po_no: "PO-2604-D", status: "awaiting_all_docs", product_id: "PROD-TITANIUM-04", quantity_tons: 90.000, etd_date: "2026-05-18", booking_no: "BK-2604-03", invoice_no: "WCAT018", container_size: "40' HQ", container_qty: 4 },
+  { di_no: "DI-2603-C6", po_no: "PO-2603-C", status: "eta", product_id: "PROD-SPECIAL-09", quantity_tons: 120.000, etd_date: "2026-05-18", booking_no: "BK-2603-06", invoice_no: "WCAT016", container_size: "40'", container_qty: 6, product_info: "Tapioca Flour Extra", weight_mt: 120.000, contract_value: 78000, destination_country: "Germany" },
+  { di_no: "DI-2604-D2", po_no: "PO-2604-D", status: "etd", product_id: "PROD-TITANIUM-04", quantity_tons: 50.000, etd_date: "2026-05-18", booking_no: "BK-2604-02", invoice_no: "WCAT017", container_size: "20'", container_qty: 4, product_info: "Sweet Potato Powder", weight_mt: 50.000, contract_value: 35000, destination_country: "United States" },
+  { di_no: "DI-2604-D3", po_no: "PO-2604-D", status: "awaiting_all_docs", product_id: "PROD-TITANIUM-04", quantity_tons: 90.000, etd_date: "2026-05-18", booking_no: "BK-2604-03", invoice_no: "WCAT018", container_size: "40' HQ", container_qty: 4, product_info: "Tapioca Pearls Premium", weight_mt: 90.000, contract_value: 67500, destination_country: "China" },
 
   // Yellow Day 3: May 20, 2026 (9 containers loaded)
-  { di_no: "DI-2604-D4", po_no: "PO-2604-D", status: "etd", product_id: "PROD-TITANIUM-04", quantity_tons: 110.000, etd_date: "2026-05-20", booking_no: "BK-2604-04", invoice_no: "WCAT019", container_size: "40'", container_qty: 6 },
-  { di_no: "DI-2604-D5", po_no: "PO-2604-D", status: "awaiting_bl_confirmation", product_id: "PROD-TITANIUM-04", quantity_tons: 35.000, etd_date: "2026-05-20", booking_no: "BK-2604-05", invoice_no: "WCAT020", container_size: "20'", container_qty: 3 }
+  { di_no: "DI-2604-D4", po_no: "PO-2604-D", status: "etd", product_id: "PROD-TITANIUM-04", quantity_tons: 110.000, etd_date: "2026-05-20", booking_no: "BK-2604-04", invoice_no: "WCAT019", container_size: "40'", container_qty: 6, product_info: "Pumpkin Flour Organic", weight_mt: 110.000, contract_value: 85250, destination_country: "Japan" },
+  { di_no: "DI-2604-D5", po_no: "PO-2604-D", status: "awaiting_bl_confirmation", product_id: "PROD-TITANIUM-04", quantity_tons: 35.000, etd_date: "2026-05-20", booking_no: "BK-2604-05", invoice_no: "WCAT020", container_size: "20'", container_qty: 3, product_info: "Tapioca Flour Extra", weight_mt: 35.000, contract_value: 22750, destination_country: "Singapore" }
 ];
 
 const initializeLocalStorage = () => {
   if (typeof window === "undefined") return;
 
-  const version = "v7"; // Bust cache and force reload mock shipments
+  const version = "v8"; // Bust cache and force reload mock shipments with commercial metrics
   const currentVersion = localStorage.getItem("wcat_seed_version");
   if (currentVersion !== version) {
     localStorage.removeItem(LOCAL_STORAGE_KEYS.CUSTOMERS);
