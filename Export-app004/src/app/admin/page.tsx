@@ -40,7 +40,9 @@ import {
   Info,
   Download,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Sun,
+  Moon
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -65,6 +67,22 @@ export default function AdminPortal() {
 function AdminPortalContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("wcat_theme") as "dark" | "light" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.body.classList.toggle("light-theme", savedTheme === "light");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "light" ? "dark" : "light";
+    setTheme(nextTheme);
+    localStorage.setItem("wcat_theme", nextTheme);
+    document.body.classList.toggle("light-theme", nextTheme === "light");
+  };
   
   // Master lists
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -1229,6 +1247,20 @@ function AdminPortalContent() {
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span className="text-slate-300 font-semibold">Admin Panel</span>
             </div>
+
+            {/* Dynamic Theme Toggle Switch */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer flex items-center justify-center shadow-inner"
+              title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+            >
+              {theme === "light" ? (
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              ) : (
+                <Sun className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:20s]" />
+              )}
+            </button>
+
             <button
               onClick={handleLogout}
               className="py-2 px-3 bg-red-950/30 hover:bg-red-900/40 text-red-400 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-red-500/20 transition-all cursor-pointer"
