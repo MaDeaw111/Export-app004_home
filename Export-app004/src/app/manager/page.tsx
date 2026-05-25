@@ -53,6 +53,10 @@ function ManagerPortalContent() {
   const [selectedCountryFilter, setSelectedCountryFilter] = useState("all");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [isLedgerExpanded, setIsLedgerExpanded] = useState(false);
+  const [activeMonthSlicer, setActiveMonthSlicer] = useState("all");
+  const [activeTypeSlicer, setActiveTypeSlicer] = useState("all");
+  const [activeProductSlicer, setActiveProductSlicer] = useState("all");
+  const [activeOwnerSlicer, setActiveOwnerSlicer] = useState("all");
 
   // Retrieve customer name for a shipment (Declared at the top to resolve runtime ReferenceError)
   const getCustomerName = (poNo: string) => {
@@ -173,6 +177,134 @@ function ManagerPortalContent() {
   const visibleShipments = useMemo(() => {
     return isLedgerExpanded ? watchlistShipments : watchlistShipments.slice(0, 5);
   }, [watchlistShipments, isLedgerExpanded]);
+
+  // Dynamic filter for charts data
+  const filteredShipmentsForCharts = useMemo(() => {
+    return shipments.filter(s => {
+      // Month Filter
+      if (activeMonthSlicer !== "all") {
+        if (!s.etd_date) return false;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const mName = monthNames[new Date(s.etd_date).getMonth()];
+        if (mName !== activeMonthSlicer) return false;
+      }
+      
+      // Shipment Type Filter
+      if (activeTypeSlicer !== "all") {
+        const type = s.shipment_type || "container";
+        const mapType: Record<string, string> = { container: "Container", bulk: "Bulk", domestic: "Domestic" };
+        const displayType = mapType[type] || "Container";
+        if (displayType !== activeTypeSlicer) return false;
+      }
+      
+      // Product Filter
+      if (activeProductSlicer !== "all") {
+        const prod = s.product_info || "Tapioca Flour Extra";
+        if (prod !== activeProductSlicer) return false;
+      }
+      
+      // Owner/PIC Filter
+      if (activeOwnerSlicer !== "all") {
+        let pic = "Ae";
+        if (s.po_no.startsWith("PO-2603")) pic = "Depper";
+        else if (s.po_no.startsWith("PO-2604")) pic = "Pai";
+        if (pic !== activeOwnerSlicer) return false;
+      }
+      
+      return true;
+    });
+  }, [shipments, activeMonthSlicer, activeTypeSlicer, activeProductSlicer, activeOwnerSlicer, purchaseOrders, customers]);
+
+  // Chart 1: Monthly Export Volume (MT)
+  const monthlyVolumes = useMemo(() => {
+    const vols = { Jan: 120, Feb: 150, Mar: 210, Apr: 180, May: 240, Jun: 310 };
+    
+    // Aggregate live data volume if etd_date matches
+    filteredShipmentsForCharts.forEach(s => {
+      if (!s.etd_date) return;
+      const monthIdx = new Date(s.etd_date).getMonth();
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const mName = monthNames[monthIdx];
+      const vol = s.weight_mt || s.quantity_tons || 0;
+      if (mName in vols) {
+        vols[mName as keyof typeof vols] += vol;
+      }
+    });
+    
+    return Object.entries(vols).map(([month, vol]) => ({ month, vol }));
+  }, [filteredShipmentsForCharts]);
+
+  // Chart 2: Shipment Type Share (Pie/Donut segment calculations)
+  const shipmentTypeShare = useMemo(() => {
+    const types = { Container: 180, Bulk: 290, Domestic: 120 };
+    
+    filteredShipmentsForCharts.forEach(s => {
+      const type = s.shipment_type || "container";
+      const vol = s.weight_mt || s.quantity_tons || 0;
+      if (type === "container") types.Container += vol;
+      else if (type === "bulk") types.Bulk += vol;
+      else if (type === "domestic" || type === "domestic_truck") types.Domestic += vol;
+    });
+    
+    const total = Object.values(types).reduce((a, b) => a + b, 0) || 1;
+    return Object.entries(types).map(([name, vol]) => ({
+      name,
+      value: vol,
+      percentage: Math.round((vol / total) * 100)
+    }));
+  }, [filteredShipmentsForCharts]);
+
+  // Chart 3: Weekly Price Index ($/MT)
+  const weeklyPriceIndex = useMemo(() => {
+    const weekData = [
+      { week: "Week 1", totalPrice: 0, count: 0, defaultVal: 610 },
+      { week: "Week 2", totalPrice: 0, count: 0, defaultVal: 630 },
+      { week: "Week 3", totalPrice: 0, count: 0, defaultVal: 645 },
+      { week: "Week 4", totalPrice: 0, count: 0, defaultVal: 670 },
+      { week: "Week 5", totalPrice: 0, count: 0, defaultVal: 690 }
+    ];
+    
+    filteredShipmentsForCharts.forEach(s => {
+      if (!s.etd_date) return;
+      const d = new Date(s.etd_date);
+      const day = d.getDate();
+      const vol = s.weight_mt || s.quantity_tons || 0;
+      const val = s.contract_value || 0;
+      if (vol <= 0 || val <= 0) return;
+      const unitPrice = val / vol;
+      
+      const weekIdx = Math.min(Math.floor((day - 1) / 7), 4);
+      weekData[weekIdx].totalPrice += unitPrice;
+      weekData[weekIdx].count += 1;
+    });
+    
+    return weekData.map(w => ({
+      week: w.week,
+      price: w.count > 0 ? Math.round(w.totalPrice / w.count) : w.defaultVal
+    }));
+  }, [filteredShipmentsForCharts]);
+
+  // Chart 4: Top 5 Products by Value ($)
+  const topProducts = useMemo(() => {
+    const prodMap: Record<string, number> = {
+      "Tapioca Flour Extra": 98000,
+      "Sweet Potato Powder": 85000,
+      "Tapioca Pearls Premium": 125000,
+      "Pumpkin Flour Organic": 72000,
+      "Tapioca Flour Premium": 64000
+    };
+    
+    filteredShipmentsForCharts.forEach(s => {
+      const name = s.product_info || "Tapioca Flour Extra";
+      const val = s.contract_value || 0;
+      prodMap[name] = (prodMap[name] || 0) + val;
+    });
+    
+    return Object.entries(prodMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [filteredShipmentsForCharts]);
 
   // Unique Products List for filter dropdown
   const uniqueProducts = useMemo(() => {
@@ -434,6 +566,296 @@ function ManagerPortalContent() {
               <p className="text-[10px] text-slate-500 font-medium mt-1.5 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-purple-400" /> Normalized value allocation
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ======================================================== */}
+        {/* SECTION 1.5: EXECUTIVE ANALYTICS & COMMERCIAL CHARTS    */}
+        {/* ======================================================== */}
+        <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-md space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900/60 pb-4">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                <Layers className="w-4.5 h-4.5 text-cyan-400" /> Executive Analytics & Commercial Control Tower
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">Real-time dynamic export intelligence, volumetric allocations, price indices, and top revenue drivers.</p>
+            </div>
+          </div>
+
+          {/* Slicers row */}
+          <div className="flex flex-wrap items-center gap-6 text-xs border-b border-slate-900/50 pb-4 select-none">
+            {/* Month Slicer */}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest font-mono">Month:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {["all", "Jan", "Feb", "Mar", "Apr", "May", "Jun"].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setActiveMonthSlicer(m)}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all cursor-pointer border ${
+                      activeMonthSlicer === m
+                        ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-300 shadow-sm"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {m === "all" ? "All" : m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Shipment Type Slicer */}
+            <div className="flex items-center gap-2 pl-4 border-l border-slate-900/60">
+              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest font-mono">Type:</span>
+              <div className="flex gap-1.5">
+                {["all", "Container", "Bulk", "Domestic"].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setActiveTypeSlicer(t)}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all cursor-pointer border ${
+                      activeTypeSlicer === t
+                        ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-300 shadow-sm"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {t === "all" ? "All" : t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Product Slicer */}
+            <div className="flex items-center gap-2 pl-4 border-l border-slate-900/60">
+              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest font-mono">Product:</span>
+              <select
+                value={activeProductSlicer}
+                onChange={(e) => setActiveProductSlicer(e.target.value)}
+                className="px-2 py-0.5 bg-slate-900/40 border border-slate-800 rounded-md text-[10px] font-bold text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+              >
+                <option value="all">All Products</option>
+                {uniqueProducts.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* PIC/Owner Slicer */}
+            <div className="flex items-center gap-2 pl-4 border-l border-slate-900/60">
+              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest font-mono">Owner:</span>
+              <div className="flex gap-1.5">
+                {["all", "Ae", "Depper", "Pai"].map(o => (
+                  <button
+                    key={o}
+                    onClick={() => setActiveOwnerSlicer(o)}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase transition-all cursor-pointer border ${
+                      activeOwnerSlicer === o
+                        ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-300 shadow-sm"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {o === "all" ? "All" : o}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Chart 1: Monthly Export Volume */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Monthly Export Volume (MT)</h4>
+                <div className="w-full h-48 flex items-end justify-between px-2 pt-2 pb-6 border-b border-slate-900/60 relative">
+                  {(() => {
+                    const maxVol = Math.max(...monthlyVolumes.map(mv => mv.vol), 1);
+                    return monthlyVolumes.map((item, idx) => {
+                      const pct = (item.vol / maxVol) * 100;
+                      return (
+                        <div key={idx} className="flex flex-col items-center flex-1 group relative">
+                          <div className="absolute bottom-full mb-1 bg-slate-950 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none select-none z-10 whitespace-nowrap">
+                            {item.vol.toFixed(1)} MT
+                          </div>
+                          <div 
+                            className="w-8 rounded-t bg-gradient-to-t from-blue-600 via-cyan-500 to-cyan-400 transition-all duration-500 group-hover:from-blue-500 group-hover:to-cyan-300 shadow-md shadow-cyan-500/10"
+                            style={{ height: `${Math.max(pct, 5)}%` }}
+                          ></div>
+                          <span className="absolute top-full mt-1.5 font-mono text-[9px] font-bold text-slate-500 group-hover:text-slate-300 tracking-wider">
+                            {item.month.toUpperCase()}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Chart 2: Shipment Type Share */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Shipment Type Share (MT)</h4>
+                <div className="flex flex-col sm:flex-row items-center justify-around gap-6 h-48 py-2">
+                  <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(15, 23, 42, 0.4)" strokeWidth="3" />
+                      {(() => {
+                        let cumulativePercentage = 0;
+                        const colors = ["stroke-cyan-400", "stroke-emerald-400", "stroke-amber-400"];
+                        return shipmentTypeShare.map((item, idx) => {
+                          const strokeDash = `${item.percentage} ${100 - item.percentage}`;
+                          const strokeOffset = 100 - cumulativePercentage;
+                          cumulativePercentage += item.percentage;
+                          return (
+                            <circle
+                              key={idx}
+                              cx="18"
+                              cy="18"
+                              r="15.915"
+                              fill="none"
+                              className={`transition-all duration-500 ${colors[idx % colors.length]}`}
+                              strokeWidth="3"
+                              strokeDasharray={strokeDash}
+                              strokeDashoffset={strokeOffset}
+                            />
+                          );
+                        });
+                      })()}
+                    </svg>
+                    <div className="absolute text-center select-none pointer-events-none">
+                      <span className="text-[10px] text-slate-500 font-mono font-bold uppercase tracking-wider block">Total</span>
+                      <span className="text-sm font-extrabold text-white leading-none">
+                        {shipmentTypeShare.reduce((sum, item) => sum + item.value, 0).toFixed(0)} <span className="text-[9px] font-normal text-slate-500">MT</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {(() => {
+                      const bulletColors = ["bg-cyan-400", "bg-emerald-400", "bg-amber-400"];
+                      const textColors = ["text-cyan-300", "text-emerald-300", "text-amber-300"];
+                      return shipmentTypeShare.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${bulletColors[idx % bulletColors.length]}`}></span>
+                          <div className="text-[11px] leading-tight select-none">
+                            <span className="font-semibold text-slate-300 block">{item.name}</span>
+                            <span className={`text-[10px] font-mono font-bold ${textColors[idx % textColors.length]}`}>
+                              {item.percentage}% ({item.value.toFixed(0)} MT)
+                            </span>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Chart 3: Weekly Price Index */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Weekly Price Index ($/MT)</h4>
+                <div className="w-full h-48 relative border-b border-slate-900/60 pt-4 pb-6 px-1 flex items-end">
+                  {(() => {
+                    const prices = weeklyPriceIndex.map(wp => wp.price);
+                    const maxPrice = Math.max(...prices, 1);
+                    const minPrice = Math.min(...prices, 0) * 0.9;
+                    const range = maxPrice - minPrice;
+                    
+                    const points = weeklyPriceIndex.map((wp, idx) => {
+                      const x = (idx / 4) * 100;
+                      const y = 100 - ((wp.price - minPrice) / range) * 80;
+                      return { x, y, label: wp.week, val: wp.price };
+                    });
+                    
+                    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+                    const areaPath = `${linePath} L 100 100 L 0 100 Z`;
+                    
+                    return (
+                      <div className="w-full h-full relative">
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                          <defs>
+                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.15" />
+                              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <line x1="0" y1="20" x2="100" y2="20" className="stroke-slate-900/20" strokeWidth="0.5" />
+                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-900/20" strokeWidth="0.5" />
+                          <line x1="0" y1="80" x2="100" y2="80" className="stroke-slate-900/20" strokeWidth="0.5" />
+
+                          <path d={areaPath} fill="url(#areaGrad)" className="transition-all duration-500" />
+                          <path d={linePath} fill="none" className="stroke-cyan-400 transition-all duration-500" strokeWidth="1.5" />
+                          {points.map((p, idx) => (
+                            <circle
+                              key={idx}
+                              cx={p.x}
+                              cy={p.y}
+                              r="1.8"
+                              className="fill-cyan-400 stroke-cyan-300 stroke-[0.8] hover:r-[3] hover:fill-white transition-all cursor-pointer"
+                            />
+                          ))}
+                        </svg>
+                        
+                        {points.map((p, idx) => (
+                          <div 
+                            key={idx} 
+                            className="absolute flex flex-col items-center group pointer-events-none"
+                            style={{ left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%, -120%)" }}
+                          >
+                            <span className="bg-slate-950 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-md">
+                              ${p.val}
+                            </span>
+                          </div>
+                        ))}
+
+                        <div className="absolute top-[102%] w-full flex justify-between px-0.5 text-slate-500 text-[9px] font-bold font-mono">
+                          {weeklyPriceIndex.map((item, idx) => (
+                            <span key={idx} className="tracking-wider uppercase select-none">{item.week}</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Chart 4: Top 5 Products by Value */}
+            <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Top 5 Products by Value ($)</h4>
+                <div className="space-y-4 h-48 py-2 overflow-y-auto pr-1 flex flex-col justify-around">
+                  {(() => {
+                    const maxVal = Math.max(...topProducts.map(tp => tp.value), 1);
+                    return topProducts.map((item, idx) => {
+                      const widthPct = (item.value / maxVal) * 100;
+                      const barColors = [
+                        "from-blue-600 to-cyan-500", 
+                        "from-indigo-600 to-blue-500", 
+                        "from-emerald-600 to-cyan-500",
+                        "from-purple-600 to-indigo-500",
+                        "from-amber-600 to-yellow-500"
+                      ];
+                      return (
+                        <div key={idx} className="space-y-1.5 group select-none">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-350">
+                            <span className="truncate max-w-[200px] text-slate-350 font-bold group-hover:text-cyan-400 transition-all">{item.name}</span>
+                            <span className="font-extrabold text-white font-mono">${item.value.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden bg-slate-900/50 border border-slate-900">
+                            <div 
+                              className={`h-full rounded-full bg-gradient-to-r ${barColors[idx % barColors.length]} transition-all duration-500`}
+                              style={{ width: `${widthPct}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
         </section>

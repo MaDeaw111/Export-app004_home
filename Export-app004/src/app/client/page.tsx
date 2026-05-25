@@ -388,7 +388,7 @@ function ClientPortalContent() {
                                     const activePhysIndex = getPhysicalActiveIndex(shipStatus || "");
                                     let physStages = ["Prod", "Pack", "Loaded", "ETD", "ETA"];
                                     if (type === "bulk") {
-                                      physStages = ["Production", "At Wharf", "Loading Vessel", "ETD", "ETA"];
+                                      physStages = ["Production", "Barge Loading", "River Transit", "Sichang Anchorage", "Sailing (ETD/ETA)"];
                                     } else if (type === "domestic") {
                                       physStages = ["Production", "Queueing", "Weigh-In", "Weigh-Out", "Delivered"];
                                     }
@@ -401,7 +401,7 @@ function ClientPortalContent() {
                                           {/* Active Progress Line */}
                                           <div 
                                             className="h-full bg-emerald-500/80 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${(activePhysIndex / 4) * 100}%` }}
+                                            style={{ width: `${(activePhysIndex / (physStages.length - 1)) * 100}%` }}
                                           ></div>
                                         </div>
 
@@ -501,7 +501,7 @@ function ClientPortalContent() {
                                     
                                     let docStages = ["Book", "Prep", "BL", "Draft", "All Completed"];
                                     if (type === "bulk") {
-                                      docStages = ["Fixture Note", "Prep Docs", "Mate's Receipt", "Draft", "All Completed"];
+                                      docStages = ["PO Issued", "WH Weight", "Draft Docs", "All Ship Docs"];
                                     } else if (type === "domestic") {
                                       docStages = ["PO Issued", "Weight Ticket", "Delivery Order", "Invoice", "Paid"];
                                     }
@@ -513,7 +513,7 @@ function ClientPortalContent() {
                                           {/* Active Progress Line */}
                                           <div 
                                             className="h-full bg-emerald-500/80 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${(activeDocIndex / 4) * 100}%` }}
+                                            style={{ width: `${(activeDocIndex / (docStages.length - 1)) * 100}%` }}
                                           ></div>
                                         </div>
 
