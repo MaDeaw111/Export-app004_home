@@ -131,8 +131,8 @@ const MOCK_SHIPMENTS: Shipment[] = [
   { di_no: "DI-2601-A4", po_no: "PO-2601-A", status: "eta", product_id: "PROD-SPECIAL-09", quantity_tons: 20.000, container_no: "OOCL8827182", seal_no: "SEAL-882736", forwarder_id: "OOCL", vessel_voyage: "OOCL HONG KONG / Voyage 2603N", etd_date: "2026-06-01", eta_date: "2026-06-12", bl_draft_link: "https://example.com/drafts/bl-approved.pdf", shipping_docs_link: "https://example.com/docs/shipping-docs-2601-a4.zip", bl_approval_status: "approved", bl_feedback: "Draft looks perfect! Passed inspection.", booking_no: "BK-2601-77", invoice_no: "WCAT004", container_size: "Bulk Vessel", container_qty: 2, doc_status: "all_ship_docs_completed", shipment_type: "bulk" },
   
   // Vortex PO-2603-C DIs
-  { di_no: "DI-2603-C1", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 100.000, forwarder_id: "DHL Global", vessel_voyage: "MV. COSCO SHIPPING / V.240E", etd_date: "2026-05-29", eta_date: "2026-06-30", invoice_no: "WCAT006", container_size: "Truck Logistics", container_qty: 4, shipment_type: "domestic" },
-  { di_no: "DI-2603-C2", po_no: "PO-2603-C", status: "awaiting_all_docs", product_id: "PROD-SPECIAL-09", quantity_tons: 150.000, container_no: "HLXU1182736", seal_no: "SEAL-110293", forwarder_id: "Hapag-Lloyd", vessel_voyage: "HAPAG-LLOYD AL DAHNA / Voyage 2605W", etd_date: "2026-06-10", eta_date: "2026-06-25", bl_draft_link: "https://example.com/drafts/bl-vortex-approved.pdf", bl_approval_status: "approved", bl_feedback: "B/L confirmed by Hans Müller.", booking_no: "BK-2603-12", invoice_no: "WCAT007", container_size: "Truck Logistics", container_qty: 2, shipment_type: "domestic" },
+  { di_no: "DI-2603-C1", po_no: "PO-2603-C", status: "awaiting_loading", product_id: "PROD-SPECIAL-09", quantity_tons: 100.000, forwarder_id: "DHL Global", vessel_voyage: "MV. COSCO SHIPPING / V.240E", etd_date: "2026-05-29", eta_date: "2026-06-30", invoice_no: "WCAT006", container_size: "Truck", container_qty: 4, shipment_type: "domestic" },
+  { di_no: "DI-2603-C2", po_no: "PO-2603-C", status: "awaiting_all_docs", product_id: "PROD-SPECIAL-09", quantity_tons: 150.000, container_no: "HLXU1182736", seal_no: "SEAL-110293", forwarder_id: "Hapag-Lloyd", vessel_voyage: "HAPAG-LLOYD AL DAHNA / Voyage 2605W", etd_date: "2026-06-10", eta_date: "2026-06-25", bl_draft_link: "https://example.com/drafts/bl-vortex-approved.pdf", bl_approval_status: "approved", bl_feedback: "B/L confirmed by Hans Müller.", booking_no: "BK-2603-12", invoice_no: "WCAT007", container_size: "Truck", container_qty: 2, shipment_type: "domestic" },
 
   // Vortex Special 09 20' Container Row (Mixed)
   { di_no: "DI-2603-C7", po_no: "PO-2603-C", status: "etd", product_id: "PROD-SPECIAL-09", quantity_tons: 15.000, container_no: "ONEU7728362", seal_no: "SEAL-773829", forwarder_id: "ONE Line", vessel_voyage: "ONE APUS / Voyage 2606E", etd_date: "2026-05-30", eta_date: "2026-06-02", bl_draft_link: "https://example.com/drafts/bl-oceanic.pdf", shipping_docs_link: "https://example.com/docs/oceanic-docs.zip", bl_approval_status: "approved", booking_no: "BK-2604-04", invoice_no: "WCAT008", container_size: "20'", container_qty: 2, shipment_type: "container" },
@@ -170,7 +170,7 @@ const MOCK_SHIPMENTS: Shipment[] = [
 const initializeLocalStorage = () => {
   if (typeof window === "undefined") return;
 
-  const version = "v6"; // Bust cache and force reload mock shipments
+  const version = "v7"; // Bust cache and force reload mock shipments
   const currentVersion = localStorage.getItem("wcat_seed_version");
   if (currentVersion !== version) {
     localStorage.removeItem(LOCAL_STORAGE_KEYS.CUSTOMERS);
