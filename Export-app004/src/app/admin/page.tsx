@@ -158,6 +158,7 @@ function AdminPortalContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomerFilter, setSelectedCustomerFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
+  const [selectedShipmentTypeFilter, setSelectedShipmentTypeFilter] = useState("all");
 
   // Selection for bulk operations
   const [selectedDIIds, setSelectedDIIds] = useState<string[]>([]);
@@ -182,7 +183,8 @@ function AdminPortalContent() {
     po_date: new Date().toISOString().split("T")[0],
     total_amount_usd: 0,
     payment_term: "30 Days Net",
-    sales_person_id: "SALES-01"
+    sales_person_id: "SALES-01",
+    shipment_type: "container" as "container" | "bulk" | "domestic"
   });
   const [splitDIs, setSplitDIs] = useState<Array<{
     di_no: string;
@@ -376,7 +378,8 @@ function AdminPortalContent() {
       quantity_tons: Number(row.quantity_tons),
       bl_approval_status: "pending",
       container_size: "40'",
-      container_qty: 1
+      container_qty: 1,
+      shipment_type: newPO.shipment_type
     }));
 
     try {
@@ -390,7 +393,8 @@ function AdminPortalContent() {
           po_date: new Date().toISOString().split("T")[0],
           total_amount_usd: 0,
           payment_term: "30 Days Net",
-          sales_person_id: "SALES-01"
+          sales_person_id: "SALES-01",
+          shipment_type: "container"
         });
         setSplitDIs([{ di_no: "DI-XXXX-1", product_id: "PROD-AUSTENITE-22", quantity_tons: 10.0 }]);
         setActiveTab("logs");
@@ -440,7 +444,12 @@ function AdminPortalContent() {
         selectedStatusFilter === "all" || 
         ship.status === selectedStatusFilter;
 
-      return matchesSearch && matchesCustomer && matchesStatus;
+      const matchesType = 
+        selectedShipmentTypeFilter === "all" || 
+        ship.shipment_type === selectedShipmentTypeFilter ||
+        (selectedShipmentTypeFilter === "container" && !ship.shipment_type);
+
+      return matchesSearch && matchesCustomer && matchesStatus && matchesType;
     });
   };
 
@@ -1360,7 +1369,7 @@ function AdminPortalContent() {
           <section className="space-y-6">
             
             {/* Search & Filter bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/20 p-4 rounded-2xl border border-slate-900">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-900/20 p-4 rounded-2xl border border-slate-900">
               {/* Fuzzy Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -1385,6 +1394,21 @@ function AdminPortalContent() {
                   {customers.map(c => (
                     <option key={c.customer_id} value={c.customer_id}>{c.customer_name}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Shipment Type Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={selectedShipmentTypeFilter}
+                  onChange={(e) => setSelectedShipmentTypeFilter(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white appearance-none focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+                >
+                  <option value="all">All Shipment Types</option>
+                  <option value="container">Container</option>
+                  <option value="bulk">Bulk Vessel</option>
+                  <option value="domestic">Domestic</option>
                 </select>
               </div>
 
@@ -1476,7 +1500,11 @@ function AdminPortalContent() {
                             </td>
                             <td className="py-3 px-3">
                               <span className="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-900 text-[10px] font-bold text-blue-300">
-                                {ship.container_size || "40'"}
+                                {ship.shipment_type === "bulk" 
+                                  ? "N/A - Bulk" 
+                                  : ship.shipment_type === "domestic" 
+                                    ? "Truck Logistics" 
+                                    : (ship.container_size || "40'")}
                               </span>
                             </td>
                             <td className="py-3 px-3">
@@ -1727,7 +1755,7 @@ function AdminPortalContent() {
 
             <form onSubmit={handleCreatePO} className="space-y-6">
               {/* Form Row 1 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                     PO No. (Unique identifier)
@@ -1758,6 +1786,22 @@ function AdminPortalContent() {
                         {c.customer_name} ({c.customer_id})
                       </option>
                     ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    Shipment Type
+                  </label>
+                  <select
+                    required
+                    value={newPO.shipment_type}
+                    onChange={(e) => setNewPO(prev => ({ ...prev, shipment_type: e.target.value as any }))}
+                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="container">Container</option>
+                    <option value="bulk">Bulk Vessel</option>
+                    <option value="domestic">Domestic</option>
                   </select>
                 </div>
               </div>
