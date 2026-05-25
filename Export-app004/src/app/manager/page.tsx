@@ -27,7 +27,9 @@ import {
   Activity,
   Layers,
   ArrowRight,
-  TrendingDown
+  TrendingDown,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 export default function ManagerPortal() {
@@ -47,7 +49,18 @@ function ManagerPortalContent() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductFilter, setSelectedProductFilter] = useState("all");
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState("all");
+  const [selectedCountryFilter, setSelectedCountryFilter] = useState("all");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [isLedgerExpanded, setIsLedgerExpanded] = useState(false);
+
+  // Retrieve customer name for a shipment (Declared at the top to resolve runtime ReferenceError)
+  const getCustomerName = (poNo: string) => {
+    const po = purchaseOrders.find(p => p.po_no === poNo);
+    if (!po) return "Apex Logistics";
+    const cust = customers.find(c => c.customer_id === po.customer_id);
+    return cust ? cust.customer_name : "Apex Logistics";
+  };
 
   useEffect(() => {
     // Theme setup
@@ -116,32 +129,76 @@ function ManagerPortalContent() {
     };
   }, [shipments]);
 
-  // 2. Watchlist Filter Logic
+  // 2. Watchlist Filter & Sort Logic (sorted by total financial risk exposure)
   const watchlistShipments = useMemo(() => {
-    return shipments.filter(ship => {
-      // Show shipments that are active (not completed/eta)
-      if (ship.status === "eta") return false;
+    return shipments
+      .filter(ship => {
+        // Show shipments that are active (not completed/eta)
+        if (ship.status === "eta") return false;
 
-      // Product information details
-      const prod = ship.product_info || "Tapioca Flour Extra";
-      const matchesSearch = 
-        ship.di_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ship.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.toLowerCase().includes(searchQuery.toLowerCase());
+        // Filter: ONLY active shipments tagged with Red 10+ LOAD ALERT status (volume >= 40 or specific DI-2601-A3)
+        const volume = ship.weight_mt || ship.quantity_tons || 0;
+        const hasHighLoadAlert = volume >= 40 || ship.di_no === "DI-2601-A3";
+        if (!hasHighLoadAlert) return false;
 
-      const matchesProduct = 
-        selectedProductFilter === "all" || 
-        prod === selectedProductFilter;
+        // Product information details
+        const prod = ship.product_info || "Tapioca Flour Extra";
+        const matchesSearch = 
+          ship.di_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ship.po_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          prod.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesSearch && matchesProduct;
-    });
-  }, [shipments, searchQuery, selectedProductFilter]);
+        const matchesProduct = 
+          selectedProductFilter === "all" || 
+          prod === selectedProductFilter;
+
+        // Customer filter details
+        const custName = getCustomerName(ship.po_no);
+        const matchesCustomer = 
+          selectedCustomerFilter === "all" || 
+          custName === selectedCustomerFilter;
+
+        // Country/Destination filter details
+        const destCountry = ship.destination_country || "United States";
+        const matchesCountry = 
+          selectedCountryFilter === "all" || 
+          destCountry === selectedCountryFilter;
+
+        return matchesSearch && matchesProduct && matchesCustomer && matchesCountry;
+      })
+      .sort((a, b) => (b.contract_value || 0) - (a.contract_value || 0));
+  }, [shipments, searchQuery, selectedProductFilter, selectedCustomerFilter, selectedCountryFilter]);
+
+  // Executive watchlist display (sliced to top 5 rows unless expanded)
+  const visibleShipments = useMemo(() => {
+    return isLedgerExpanded ? watchlistShipments : watchlistShipments.slice(0, 5);
+  }, [watchlistShipments, isLedgerExpanded]);
 
   // Unique Products List for filter dropdown
   const uniqueProducts = useMemo(() => {
     const set = new Set<string>();
     shipments.forEach(s => {
       if (s.product_info) set.add(s.product_info);
+    });
+    return Array.from(set);
+  }, [shipments]);
+
+  // Unique Customers List for filter dropdown
+  const uniqueCustomers = useMemo(() => {
+    const set = new Set<string>();
+    shipments.forEach(s => {
+      const custName = getCustomerName(s.po_no);
+      if (custName) set.add(custName);
+    });
+    return Array.from(set);
+  }, [shipments, purchaseOrders, customers]);
+
+  // Unique Destination Countries List for filter dropdown
+  const uniqueCountries = useMemo(() => {
+    const set = new Set<string>();
+    shipments.forEach(s => {
+      const country = s.destination_country;
+      if (country) set.add(country);
     });
     return Array.from(set);
   }, [shipments]);
@@ -202,15 +259,35 @@ function ManagerPortalContent() {
       return country.toLowerCase() === selectedCountry.toLowerCase();
     });
 
-    const productMap: Record<string, { volume: number; value: number }> = {};
+    const productMap: Record<string, { volume: number; value: number; latestDiNo: string; latestUnitPrice: number; isTrendingUp: boolean; variancePercent: string }> = {};
     let totalVolume = 0;
 
     countryShipments.forEach(s => {
       const prod = s.product_info || "Tapioca Flour Extra";
       const vol = s.weight_mt || s.quantity_tons || 0;
       const val = s.contract_value || 0;
+      
       if (!productMap[prod]) {
-        productMap[prod] = { volume: 0, value: 0 };
+        // Preset baselines for realistic variance calculation
+        const baselinePrices: Record<string, number> = {
+          "Tapioca Flour Extra": 620,
+          "Sweet Potato Powder": 640,
+          "Tapioca Pearls Premium": 700,
+          "Pumpkin Flour Organic": 750
+        };
+        const baseline = baselinePrices[prod] || 600;
+        const unitPrice = vol > 0 ? val / vol : 0;
+        const isUp = unitPrice >= baseline;
+        const variance = Math.abs(((unitPrice - baseline) / baseline) * 100).toFixed(1);
+
+        productMap[prod] = { 
+          volume: 0, 
+          value: 0,
+          latestDiNo: s.di_no,
+          latestUnitPrice: unitPrice,
+          isTrendingUp: isUp,
+          variancePercent: variance
+        };
       }
       productMap[prod].volume += vol;
       productMap[prod].value += val;
@@ -221,17 +298,15 @@ function ManagerPortalContent() {
       name,
       volume: data.volume,
       value: data.value,
-      percentage: totalVolume > 0 ? (data.volume / totalVolume) * 100 : 0
+      percentage: totalVolume > 0 ? (data.volume / totalVolume) * 100 : 0,
+      latestDiNo: data.latestDiNo,
+      latestUnitPrice: data.latestUnitPrice,
+      isTrendingUp: data.isTrendingUp,
+      variancePercent: data.variancePercent
     })).sort((a, b) => b.volume - a.volume);
   }, [selectedCountry, shipments]);
 
-  // Retrieve customer name for a shipment
-  const getCustomerName = (poNo: string) => {
-    const po = purchaseOrders.find(p => p.po_no === poNo);
-    if (!po) return "Apex Logistics";
-    const cust = customers.find(c => c.customer_id === po.customer_id);
-    return cust ? cust.customer_name : "Apex Logistics";
-  };
+
 
   return (
     <div className="min-h-screen text-slate-100 font-sans transition-all duration-300">
@@ -401,6 +476,36 @@ function ManagerPortalContent() {
                   ))}
                 </select>
               </div>
+
+              {/* Customer Filter */}
+              <div className="relative flex-1 sm:flex-initial min-w-[180px]">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={selectedCustomerFilter}
+                  onChange={(e) => setSelectedCustomerFilter(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white appearance-none focus:outline-none focus:border-cyan-500 transition-all cursor-pointer"
+                >
+                  <option value="all">All Customers</option>
+                  {uniqueCustomers.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Country/Destination Filter */}
+              <div className="relative flex-1 sm:flex-initial min-w-[180px]">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={selectedCountryFilter}
+                  onChange={(e) => setSelectedCountryFilter(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white appearance-none focus:outline-none focus:border-cyan-500 transition-all cursor-pointer"
+                >
+                  <option value="all">All Destinations</option>
+                  {uniqueCountries.map(co => (
+                    <option key={co} value={co}>{co}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -410,58 +515,139 @@ function ManagerPortalContent() {
                 <thead>
                   <tr className="border-b border-slate-900 bg-slate-950/40 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">
                     <th className="py-4 px-5">DI NO.</th>
-                    <th className="py-4 px-3">CUSTOMER</th>
+                    <th className="py-4 px-3">CUSTOMER & PIC</th>
                     <th className="py-4 px-3">PRODUCT</th>
                     <th className="py-4 px-3">VOLUME (MT)</th>
-                    <th className="py-4 px-3">VALUE ($)</th>
-                    <th className="py-4 px-3">DESTINATION</th>
-                    <th className="py-4 px-3 text-center">ALERT STATUS</th>
+                    <th className="py-4 px-3">UNIT PRICE & VALUE</th>
+                    <th className="py-4 px-3">SLA STATUS</th>
+                    <th className="py-4 px-3">NEXT ACTION REQUIRED</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-900/60 text-xs">
-                  {watchlistShipments.length === 0 ? (
+                  {visibleShipments.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-500 font-medium">
-                        No commercial alerts or active bottlenecks detected.
+                        No active commercial bottlenecks or watchlist items detected.
                       </td>
                     </tr>
                   ) : (
-                    watchlistShipments.map(ship => {
+                    visibleShipments.map(ship => {
                       const volume = ship.weight_mt || ship.quantity_tons || 0;
                       const value = ship.contract_value || 0;
                       const prod = ship.product_info || "Tapioca Flour Extra";
-                      const country = ship.destination_country || "United States";
                       
-                      // Derive alert status details
-                      const hasHighLoadAlert = volume >= 40 || ship.di_no === "DI-2601-A3";
-                      
+                      // Calculate average unit price
+                      const unitPrice = volume > 0 ? value / volume : 0;
+
+                      // Customer Name and PIC Assignment
+                      const customerName = getCustomerName(ship.po_no);
+                      let internalPic = "Ae"; // Default PIC
+                      if (ship.po_no.startsWith("PO-2603")) {
+                        internalPic = "Depper";
+                      } else if (ship.po_no.startsWith("PO-2604")) {
+                        internalPic = "Pai";
+                      }
+
+                      // SLA Status determination
+                      const getSlaStatus = (item: Shipment) => {
+                        if (!item.etd_date) return "Within SLA";
+                        const etdParts = item.etd_date.split("-").map(Number);
+                        const etd = new Date(etdParts[0], etdParts[1] - 1, etdParts[2]);
+                        const today = new Date(2026, 4, 25); // May 25, 2026 reference date
+                        const diffTime = today.getTime() - etd.getTime();
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays > 0) {
+                          return `Over SLA by ${diffDays} Days`;
+                        } else if (diffDays === 0) {
+                          return "SLA Warning (Today)";
+                        } else {
+                          return "Within SLA";
+                        }
+                      };
+
+                      const slaStatus = getSlaStatus(ship);
+                      const isDelayed = slaStatus.startsWith("Over SLA") || slaStatus.includes("Warning");
+
+                      // Next Action Required message
+                      const getNextAction = (item: Shipment, pic: string) => {
+                        if (item.di_no === "DI-2601-A3") {
+                          return "Awaiting Fixture Note confirmation from vessel agent";
+                        }
+                        if (item.di_no === "DI-2601-A2") {
+                          return "Ae reviewing customs declaration draft";
+                        }
+                        if (item.di_no === "DI-2601-A1") {
+                          return "Ae submitting production release request to milling plant";
+                        }
+                        
+                        switch (item.status) {
+                          case "pending_production":
+                            return `${pic} coordinating factory queue prioritization`;
+                          case "pending_packaging":
+                            return "Awaiting quality control release of packaged cargo";
+                          case "awaiting_loading":
+                            return `${pic} coordinating container spotting with yard agent`;
+                          case "loaded_into_container":
+                            return "Awaiting terminal gate-in scan and customs check";
+                          case "awaiting_bl_confirmation":
+                            return `${pic} reviewing draft B/L and shipping instruction`;
+                          case "awaiting_all_docs":
+                            return "Compile invoice & COO pack for buyer review";
+                          case "etd":
+                            return "Monitor vessel departure and load confirmation";
+                          default:
+                            return "Awaiting regular operational schedule update";
+                        }
+                      };
+
+                      const nextAction = getNextAction(ship, internalPic);
+
                       return (
                         <tr key={ship.di_no} className="hover:bg-slate-900/10 transition-all">
+                          {/* DI NO. */}
                           <td className="py-3.5 px-5 font-bold text-white leading-none">{ship.di_no}</td>
-                          <td className="py-3.5 px-3 text-slate-300 font-semibold leading-none">{getCustomerName(ship.po_no)}</td>
+                          
+                          {/* CUSTOMER & PIC */}
+                          <td className="py-3.5 px-3 leading-tight">
+                            <div className="font-semibold text-slate-300">{customerName}</div>
+                            <div className="text-[10px] text-slate-500 font-medium mt-0.5 font-mono">PIC: {internalPic}</div>
+                          </td>
+                          
+                          {/* PRODUCT */}
                           <td className="py-3.5 px-3">
-                            <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-900 text-[10px] font-semibold text-cyan-300 leading-none">
+                            <span className="px-2.5 py-1 rounded bg-slate-100 text-[#1A2B49] dark:bg-slate-950 dark:border dark:border-slate-900 dark:text-cyan-300 text-[10px] font-bold tracking-wide inline-block leading-none">
                               {prod}
                             </span>
                           </td>
+                          
+                          {/* VOLUME (MT) */}
                           <td className="py-3.5 px-3 font-semibold text-slate-300 leading-none">{volume.toFixed(2)} MT</td>
-                          <td className="py-3.5 px-3 font-bold text-white leading-none">${value.toLocaleString()}</td>
-                          <td className="py-3.5 px-3 leading-none">
-                            <div className="flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                              <span className="text-slate-300 font-medium">{country}</span>
-                            </div>
+                          
+                          {/* UNIT PRICE & VALUE */}
+                          <td className="py-3.5 px-3 leading-tight">
+                            <div className="font-bold text-[#1A2B49] dark:text-white">${unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / MT</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-500 font-mono mt-0.5 font-medium">(Total: ${value.toLocaleString()})</div>
                           </td>
-                          <td className="py-3.5 px-3 text-center leading-none">
-                            {hasHighLoadAlert ? (
+                          
+                          {/* SLA STATUS */}
+                          <td className="py-3.5 px-3 leading-none">
+                            {isDelayed ? (
                               <span className="px-2.5 py-0.5 rounded-full bg-red-950/45 border border-red-500/20 text-[9px] font-extrabold text-red-400 inline-block active-pulse">
-                                🚨 10+ LOAD ALERT
+                                🚨 {slaStatus.toUpperCase()}
                               </span>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full bg-yellow-950/40 border border-yellow-500/20 text-[9px] font-extrabold text-yellow-400 inline-block">
-                                ⏳ AWAITING BL
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-950/30 border border-emerald-500/20 text-[9px] font-extrabold text-emerald-400 inline-block">
+                                ⏳ {slaStatus.toUpperCase()}
                               </span>
                             )}
+                          </td>
+                          
+                          {/* NEXT ACTION REQUIRED */}
+                          <td className="py-3.5 px-3 leading-tight max-w-[220px]">
+                            <p className="text-slate-300 font-medium truncate" title={nextAction}>
+                              {nextAction}
+                            </p>
                           </td>
                         </tr>
                       );
@@ -470,6 +656,19 @@ function ManagerPortalContent() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Actionable Overflow Terminal */}
+            {watchlistShipments.length > 5 && (
+              <div className="border-t border-slate-900/60 bg-slate-950/10 py-3.5 px-5 flex items-center justify-center">
+                <button
+                  onClick={() => setIsLedgerExpanded(!isLedgerExpanded)}
+                  className="flex items-center gap-2 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer bg-transparent border-0 outline-none hover:underline"
+                >
+                  {isLedgerExpanded ? "Collapse Operational Ledger" : "Access Full Operational Ledger & Logistics Logs"}
+                  {isLedgerExpanded ? <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" /> : <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -683,16 +882,33 @@ function ManagerPortalContent() {
                       </p>
                     ) : (
                       selectedCountryPortfolio.map((item, idx) => (
-                        <div key={idx} className="space-y-1.5">
+                        <div key={idx} className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-slate-50/50 dark:border-slate-850 dark:bg-slate-950/30">
+                          {/* Product Title Block */}
                           <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                            <span className="truncate max-w-[180px]">{item.name}</span>
-                            <div className="text-right flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900 dark:text-white font-mono">{item.volume.toFixed(1)} MT</span>
-                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">(${item.value.toLocaleString()})</span>
+                            <span className="font-extrabold text-[#1A2B49] dark:text-white text-xs">{item.name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-mono">[{item.percentage.toFixed(0)}% OF TOTAL]</span>
+                          </div>
+                          
+                          {/* Volume & Value Metrics */}
+                          <div className="text-[11px] text-slate-700 dark:text-slate-400 font-medium">
+                            Volume: <span className="font-semibold text-slate-900 dark:text-slate-200">{item.volume.toFixed(1)} MT</span> | Total Value: <span className="font-semibold text-slate-900 dark:text-slate-200">${item.value.toLocaleString()}</span>
+                          </div>
+
+                          {/* Price Intelligence Tag */}
+                          <div className="mt-1.5 flex items-center justify-between gap-1.5 text-[10px] font-bold text-[#1A2B49] dark:text-emerald-400 bg-slate-100 dark:bg-emerald-950/20 border border-slate-250 dark:border-emerald-500/10 px-2.5 py-1 rounded-lg">
+                            <span className="truncate">Latest Closed Price: ${item.latestUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / MT (Ref: {item.latestDiNo})</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {item.isTrendingUp ? (
+                                <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+                              ) : (
+                                <TrendingDown className="w-3 h-3 text-red-600 dark:text-red-400 stroke-[2.5]" />
+                              )}
+                              <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">({item.isTrendingUp ? "+" : "-"}{item.variancePercent}%)</span>
                             </div>
                           </div>
+
                           {/* Horizontal relative volume progress bar */}
-                          <div className="w-full h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850/60">
+                          <div className="w-full h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850/60 mt-2">
                             <div 
                               className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-blue-500 dark:from-emerald-500 dark:to-cyan-400 transition-all duration-500"
                               style={{ width: `${item.percentage}%` }}
