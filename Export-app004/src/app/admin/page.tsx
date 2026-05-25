@@ -1448,7 +1448,7 @@ function AdminPortalContent() {
                       <th className="py-4 px-3">Customer Entity</th>
                       <th className="py-4 px-3">Product Info</th>
                       <th className="py-4 px-3">Quantity</th>
-                      <th className="py-4 px-3">Container</th>
+                      <th className="py-4 px-3">Shipment Types</th>
                       <th className="py-4 px-3">Current Pipeline Stage</th>
                       <th className="py-4 px-3 text-center">Manage</th>
                     </tr>
@@ -1501,62 +1501,73 @@ function AdminPortalContent() {
                             <td className="py-3 px-3">
                               <span className="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-900 text-[10px] font-bold text-blue-300">
                                 {ship.container_size || (
-                                  ship.shipment_type === "bulk" ? "Bulk Vessel (3k MT+)" :
+                                  ship.shipment_type === "bulk" ? "Bulk Vessel" :
                                   ship.shipment_type === "domestic" ? "Truck Logistics" : "40'"
                                 )}
                               </span>
                             </td>
                             <td className="py-3 px-3">
                               {(() => {
-                                // 1. Derive physical active stage
+                                // 1. Determine shipment type
+                                const shipType = ship.shipment_type || "container";
                                 const shipStatus = ship.status || (ship as any).shipment_status;
-                                const getPhysicalActiveStage = (status: string) => {
-                                  if (status === "pending_production") return "Prod";
-                                  if (status === "pending_packaging") return "Pack";
-                                  if (status === "awaiting_loading" || status === "loaded_into_container" || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") return "Loaded";
-                                  if (status === "etd") return "ETD";
-                                  if (status === "eta") return "ETA";
-                                  return "Prod";
+
+                                // 2. Physical active index (0 to 4)
+                                const getPhysicalActiveIndex = (status: string) => {
+                                  if (status === "pending_production") return 0;
+                                  if (status === "pending_packaging") return 1;
+                                  if (status === "awaiting_loading" || status === "loaded_into_container" || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") return 2;
+                                  if (status === "etd") return 3;
+                                  if (status === "eta") return 4;
+                                  return 0;
                                 };
-                                const activePhysStage = getPhysicalActiveStage(shipStatus || "");
+                                const activePhysIdx = getPhysicalActiveIndex(shipStatus || "");
                                 const isPhysPulse = shipStatus !== "eta";
 
-                                // 2. Derive document active stage
-                                const getDocActiveStage = (s: typeof ship) => {
+                                // 3. Doc active index (0 to 4)
+                                const getDocActiveIndex = (s: typeof ship, status: string) => {
                                   if (s.doc_status) {
-                                    if (s.doc_status === "get_booking") return "Book";
-                                    if (s.doc_status === "preparing_docs") return "Prep";
-                                    if (s.doc_status === "confirm_bl" || s.doc_status === "bl_stage") return "BL";
-                                    if (s.doc_status === "confirm_draft_docs") return "Draft";
-                                    if (s.doc_status === "all_ship_docs_completed") return "All Completed";
+                                    if (s.doc_status === "get_booking") return 0;
+                                    if (s.doc_status === "preparing_docs") return 1;
+                                    if (s.doc_status === "confirm_bl" || s.doc_status === "bl_stage") return 2;
+                                    if (s.doc_status === "confirm_draft_docs") return 3;
+                                    if (s.doc_status === "all_ship_docs_completed") return 4;
                                   }
-                                  if (shipStatus === "eta" || (s.bl_approval_status === "approved" && s.shipping_docs_link)) {
-                                    return "All Completed";
+                                  if (status === "eta" || (s.bl_approval_status === "approved" && s.shipping_docs_link)) {
+                                    return 4;
                                   }
                                   if (s.bl_approval_status === "approved" || s.bl_draft_link) {
-                                    return "Draft";
+                                    return 3;
                                   }
-                                  if (s.booking_no || shipStatus === "awaiting_bl_confirmation" || shipStatus === "awaiting_all_docs") {
-                                    return "BL";
+                                  if (s.booking_no || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") {
+                                    return 2;
                                   }
-                                  if (shipStatus === "pending_production") {
-                                    return "Book";
+                                  if (status === "pending_production") {
+                                    return 0;
                                   }
-                                  return "Prep";
+                                  return 1;
                                 };
-                                const activeDocStage = getDocActiveStage(ship);
-                                const docActiveStatus = ship.doc_status || (
-                                  activeDocStage === "All Completed" ? "all_ship_docs_completed" :
-                                  activeDocStage === "Draft" ? "confirm_draft_docs" :
-                                  activeDocStage === "BL" ? "confirm_bl" :
-                                  activeDocStage === "Prep" ? "preparing_docs" : "get_booking"
-                                );
-                                const isDocPulse = docActiveStatus !== "all_ship_docs_completed";
+                                const activeDocIdx = getDocActiveIndex(ship, shipStatus || "");
+                                
+                                const isDocPulse = (ship.doc_status || "") !== "all_ship_docs_completed" && shipStatus !== "eta";
 
-                                const renderPhysStage = (label: string, key: string) => {
-                                  const isActive = activePhysStage === key;
+                                // 4. Define dynamic labels based on shipment type
+                                let physLabels = ["Prod", "Pack", "Loaded", "ETD", "ETA"];
+                                let docLabels = ["Book", "Prep", "BL", "Draft", "All Completed"];
+
+                                if (shipType === "bulk") {
+                                  physLabels = ["Production", "At Wharf", "Loading Vessel", "ETD", "ETA"];
+                                  docLabels = ["Fixture Note", "Prep Docs", "Mate's Receipt", "Draft", "All Completed"];
+                                } else if (shipType === "domestic") {
+                                  physLabels = ["Production", "Queueing", "Weigh-In", "Weigh-Out", "Delivered"];
+                                  docLabels = ["PO Issued", "Weight Ticket", "Delivery Order", "Invoice", "Paid"];
+                                }
+
+                                // 5. Helper rendering methods
+                                const renderPhysStage = (label: string, idx: number) => {
+                                  const isActive = idx === activePhysIdx;
                                   return (
-                                    <span className="flex items-center gap-1" key={key}>
+                                    <span className="flex items-center gap-1" key={idx}>
                                       <span className={`transition-all font-mono text-[9px] tracking-wide ${
                                         isActive 
                                           ? "text-emerald-400 font-bold" 
@@ -1578,10 +1589,10 @@ function AdminPortalContent() {
                                   );
                                 };
 
-                                const renderDocStage = (label: string, key: string) => {
-                                  const isActive = activeDocStage === key;
+                                const renderDocStage = (label: string, idx: number) => {
+                                  const isActive = idx === activeDocIdx;
                                   return (
-                                    <span className="flex items-center gap-1" key={key}>
+                                    <span className="flex items-center gap-1" key={idx}>
                                       <span className={`transition-all font-mono text-[9px] tracking-wide ${
                                         isActive 
                                           ? "text-emerald-400 font-bold" 
@@ -1607,15 +1618,12 @@ function AdminPortalContent() {
                                   <div className="flex flex-col space-y-1 min-w-[210px] pr-2 select-none">
                                     {/* Line 1: Shipment Status (Physical Tracking) */}
                                     <div className="flex items-center gap-1 text-[9px] text-slate-600 font-bold flex-wrap leading-none">
-                                      {renderPhysStage("Prod", "Prod")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderPhysStage("Pack", "Pack")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderPhysStage("Loaded", "Loaded")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderPhysStage("ETD", "ETD")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderPhysStage("ETA", "ETA")}
+                                      {physLabels.map((lbl, i) => (
+                                        <div className="flex items-center" key={i}>
+                                          {renderPhysStage(lbl, i)}
+                                          {i < physLabels.length - 1 && <span className="text-slate-800/80 font-normal mx-0.5">|</span>}
+                                        </div>
+                                      ))}
                                     </div>
 
                                     {/* Divider */}
@@ -1623,15 +1631,12 @@ function AdminPortalContent() {
 
                                     {/* Line 2: Docs Status (Document Tracking) */}
                                     <div className="flex items-center gap-1 text-[9px] text-slate-600 font-bold flex-wrap leading-none">
-                                      {renderDocStage("Book", "Book")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderDocStage("Prep", "Prep")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderDocStage("BL", "BL")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderDocStage("Draft", "Draft")}
-                                      <span className="text-slate-800/80 font-normal mx-0.5">|</span>
-                                      {renderDocStage("All Completed", "All Completed")}
+                                      {docLabels.map((lbl, i) => (
+                                        <div className="flex items-center" key={i}>
+                                          {renderDocStage(lbl, i)}
+                                          {i < docLabels.length - 1 && <span className="text-slate-800/80 font-normal mx-0.5">|</span>}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 );
