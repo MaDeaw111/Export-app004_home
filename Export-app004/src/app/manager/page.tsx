@@ -145,40 +145,50 @@ function ManagerPortalContent() {
     return Array.from(set);
   }, [shipments]);
 
-  // 3. Products Distribution (Top Products by Volume)
-  const productDistribution = useMemo(() => {
-    const map: Record<string, number> = {};
-    shipments.forEach(s => {
-      const prod = s.product_info || "Tapioca Flour Extra";
-      const vol = s.weight_mt || s.quantity_tons || 0;
-      map[prod] = (map[prod] || 0) + vol;
-    });
-    const total = Object.values(map).reduce((a, b) => a + b, 0);
-    return Object.entries(map)
-      .map(([name, volume]) => ({ 
-        name, 
-        volume, 
-        percentage: total > 0 ? (volume / total) * 100 : 0 
-      }))
-      .sort((a, b) => b.volume - a.volume);
-  }, [shipments]);
 
-  // 4. Destination Markets Distribution
-  const countryDistribution = useMemo(() => {
-    const map: Record<string, number> = {};
+  // 4. Map Destinations Calculation (Volume Tonnages and Coordinates)
+  const mapDestinations = useMemo(() => {
+    const volumeMap: Record<string, number> = {};
+    const valueMap: Record<string, number> = {};
+    
     shipments.forEach(s => {
       const country = s.destination_country || "United States";
-      const value = s.contract_value || 0;
-      map[country] = (map[country] || 0) + value;
+      const vol = s.weight_mt || s.quantity_tons || 0;
+      const val = s.contract_value || 0;
+      volumeMap[country] = (volumeMap[country] || 0) + vol;
+      valueMap[country] = (valueMap[country] || 0) + val;
     });
-    const total = Object.values(map).reduce((a, b) => a + b, 0);
-    return Object.entries(map)
-      .map(([name, value]) => ({ 
-        name, 
-        value, 
-        percentage: total > 0 ? (value / total) * 100 : 0 
-      }))
-      .sort((a, b) => b.value - a.value);
+
+    const maxVolume = Math.max(...Object.values(volumeMap), 1);
+
+    // Precise relative coordinates in a 1000 x 500 projection viewBox
+    const coordinates: Record<string, { x: number; y: number }> = {
+      "United States": { x: 230, y: 175 },
+      "Germany": { x: 500, y: 135 },
+      "Singapore": { x: 780, y: 310 },
+      "China": { x: 760, y: 195 },
+      "Japan": { x: 865, y: 170 }
+    };
+
+    return Object.entries(volumeMap).map(([name, volume]) => {
+      const coords = coordinates[name] || { x: 500, y: 250 };
+      const value = valueMap[name] || 0;
+      const ratio = volume / maxVolume;
+      // Pulse scale and radius proportional to active volume
+      const radius = 6 + ratio * 14;
+      const pulseScale = 1.2 + ratio * 1.6;
+      
+      return {
+        name,
+        volume,
+        value,
+        x: coords.x,
+        y: coords.y,
+        radius,
+        pulseScale,
+        percentage: ratio * 100
+      };
+    });
   }, [shipments]);
 
   // Retrieve customer name for a shipment
@@ -430,67 +440,159 @@ function ManagerPortalContent() {
         </section>
 
         {/* ======================================================== */}
-        {/* SECTION 3: MARKET & PRODUCT DISTRIBUTION INSIGHTS       */}
+        {/* SECTION 3: INTERACTIVE GLOBAL SHIPMENTS WORLD MAP         */}
         {/* ======================================================== */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Card 1: Top Products Distribution */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-md relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
+        <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-md relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2 mb-6">
-                <Package className="w-4 h-4 text-cyan-400" /> Top Products by Volume (Tonnage)
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2">
+                <Globe className="w-4 h-4 text-cyan-400" /> Interactive Global Shipments Map
               </h3>
-              
-              <div className="space-y-4">
-                {productDistribution.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-200 font-semibold">{item.name}</span>
-                      <span className="text-slate-400 font-mono font-bold">
-                        {item.volume.toFixed(2)} MT <span className="text-[10px] text-slate-500">({item.percentage.toFixed(0)}%)</span>
-                      </span>
-                    </div>
-                    {/* Visual Progress Bar */}
-                    <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-                      <div 
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-blue-400 transition-all duration-1000"
-                        style={{ width: `${item.percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+              <p className="text-[10px] text-slate-500 mt-1">Real-time tonnage distribution and commercial exposure overlay</p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-6 text-[10px] font-semibold text-slate-400 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Active Destinations</span>
+              </div>
+              <div className="text-slate-500">
+                Dot Size ∝ Tonnage Volume (MT)
               </div>
             </div>
           </div>
 
-          {/* Card 2: Top Destination Markets */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-md relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2 mb-6">
-                <Globe className="w-4 h-4 text-emerald-400" /> Top Destination Markets (Contract Exposure)
-              </h3>
+          <div className="relative w-full overflow-hidden bg-slate-950/20 border border-slate-900/60 rounded-2xl flex items-center justify-center p-2 sm:p-4">
+            <svg 
+              viewBox="0 0 1000 500" 
+              className="w-full h-auto max-h-[480px] select-none text-slate-800 dark:text-slate-200 transition-colors duration-300"
+            >
+              {/* Oceanic coordinate dots grid pattern */}
+              <defs>
+                <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1" className="fill-slate-800/20 dark:fill-slate-700/10" />
+                </pattern>
+              </defs>
+              <rect width="1000" height="500" fill="url(#gridPattern)" />
+
+              {/* Vector outlines of main continents */}
+              {/* North America */}
+              <path 
+                d="M 60,80 L 110,60 L 260,60 L 300,90 L 320,130 L 290,170 L 310,210 L 280,240 L 250,220 L 225,270 L 215,270 L 210,230 L 170,215 L 120,220 L 100,160 L 80,160 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
               
-              <div className="space-y-4">
-                {countryDistribution.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-200 font-semibold">{item.name}</span>
-                      <span className="text-slate-400 font-mono font-bold">
-                        ${item.value.toLocaleString()} <span className="text-[10px] text-slate-500">({item.percentage.toFixed(0)}%)</span>
-                      </span>
-                    </div>
-                    {/* Visual Progress Bar */}
-                    <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-                      <div 
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-400 transition-all duration-1000"
-                        style={{ width: `${item.percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+              {/* Greenland */}
+              <path 
+                d="M 330,50 L 390,30 L 410,75 L 350,90 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              
+              {/* South America */}
+              <path 
+                d="M 225,275 L 260,285 L 290,310 L 320,350 L 300,430 L 280,480 L 265,480 L 250,400 L 220,330 L 215,300 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              
+              {/* Africa */}
+              <path 
+                d="M 440,250 L 485,220 L 530,220 L 555,245 L 600,290 L 585,350 L 570,390 L 545,430 L 535,430 L 515,360 L 480,310 L 440,295 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              
+              {/* Eurasia (Europe + Asia) */}
+              <path 
+                d="M 430,200 L 420,130 L 450,110 L 500,90 L 560,70 L 640,60 L 740,65 L 850,70 L 920,80 L 960,110 L 945,150 L 910,185 L 880,185 L 850,225 L 810,240 L 795,290 L 775,320 L 755,300 L 735,260 L 690,260 L 640,265 L 590,245 L 555,240 L 485,220 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              
+              {/* Australia */}
+              <path 
+                d="M 810,380 L 870,370 L 910,390 L 890,440 L 830,430 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              
+              {/* Islands */}
+              <path 
+                d="M 875,150 L 885,160 L 880,185 L 870,175 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              <path 
+                d="M 445,115 L 455,105 L 450,125 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+              <path 
+                d="M 590,380 L 600,400 L 595,410 Z" 
+                className="fill-slate-900/30 dark:fill-slate-800/15 stroke-slate-800/40 dark:stroke-slate-900/40 transition-colors" 
+                strokeWidth="1" 
+              />
+
+              {/* Dynamic pulsing dots and visual labels */}
+              {mapDestinations.map((dest) => (
+                <g key={dest.name} className="cursor-pointer group">
+                  {/* Glowing pulsing halo 1 */}
+                  <circle
+                    cx={dest.x}
+                    cy={dest.y}
+                    r={dest.radius * 2}
+                    className="fill-emerald-500/10 stroke-emerald-500/20 animate-pulse"
+                  />
+                  {/* Radial ping ring */}
+                  <circle
+                    cx={dest.x}
+                    cy={dest.y}
+                    r={dest.radius}
+                    className="fill-emerald-500/20 stroke-emerald-400/45 animate-ping"
+                    style={{
+                      transformOrigin: `${dest.x}px ${dest.y}px`,
+                      animationDuration: `${3 / dest.pulseScale}s`
+                    }}
+                  />
+                  {/* Core dot anchor */}
+                  <circle
+                    cx={dest.x}
+                    cy={dest.y}
+                    r={dest.radius * 0.55}
+                    className="fill-emerald-400 stroke-emerald-300 stroke-[1.5] shadow-lg shadow-emerald-500/35"
+                  />
+                  {/* Clean text backdrop box for high readability */}
+                  <rect
+                    x={dest.x + dest.radius + 4}
+                    y={dest.y - 12}
+                    width={dest.name.length * 7 + 10}
+                    height={16}
+                    rx={4}
+                    className="fill-slate-950/70 dark:fill-slate-900/80 stroke-slate-900/40 dark:stroke-slate-800/40"
+                    strokeWidth="0.5"
+                  />
+                  {/* Country Name text */}
+                  <text
+                    x={dest.x + dest.radius + 9}
+                    y={dest.y}
+                    className="fill-white font-mono font-extrabold text-[10px] tracking-wider pointer-events-none select-none"
+                  >
+                    {dest.name.toUpperCase()}
+                  </text>
+                  {/* Metric Subtitle text */}
+                  <text
+                    x={dest.x + dest.radius + 6}
+                    y={dest.y + 18}
+                    className="fill-slate-200 dark:fill-slate-400 font-sans font-bold text-[9px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] pointer-events-none select-none"
+                  >
+                    {dest.volume.toFixed(1)} MT / ${dest.value.toLocaleString()}
+                  </text>
+                </g>
+              ))}
+            </svg>
           </div>
         </section>
 
