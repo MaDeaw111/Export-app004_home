@@ -862,21 +862,26 @@ function AdminPortalContent() {
               {/* Timeline 1: Vessel & Transit Tracking */}
               <div className="space-y-4 flex-1">
                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-                  Vessel & Transit Tracking
+                  {impersonatedShipment.shipment_type === "domestic" ? "Physical Logistics Line" : "Vessel & Transit Tracking"}
                 </div>
                 {(() => {
+                  const type = impersonatedShipment.shipment_type || "container";
                   const shipStatus = impersonatedShipment.status || (impersonatedShipment as any).shipment_status;
-                  const getPhysicalActiveStage = (status: string) => {
-                    if (status === "pending_production") return "Prod";
-                    if (status === "pending_packaging") return "Pack";
-                    if (status === "awaiting_loading" || status === "loaded_into_container" || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") return "Loaded";
-                    if (status === "etd") return "ETD";
-                    if (status === "eta") return "ETA";
-                    return "Prod";
+                  const getPhysicalActiveIndex = (status: string) => {
+                    if (status === "pending_production") return 0;
+                    if (status === "pending_packaging") return 1;
+                    if (status === "awaiting_loading" || status === "loaded_into_container" || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") return 2;
+                    if (status === "etd") return 3;
+                    if (status === "eta") return 4;
+                    return 0;
                   };
-                  const activePhysStage = getPhysicalActiveStage(shipStatus || "");
-                  const physStages = ["Prod", "Pack", "Loaded", "ETD", "ETA"];
-                  const activePhysIndex = physStages.indexOf(activePhysStage);
+                  const activePhysIndex = getPhysicalActiveIndex(shipStatus || "");
+                  let physStages = ["Prod", "Pack", "Loaded", "ETD", "ETA"];
+                  if (type === "bulk") {
+                    physStages = ["Production", "At Wharf", "Loading Vessel", "ETD", "ETA"];
+                  } else if (type === "domestic") {
+                    physStages = ["Production", "Queueing", "Weigh-In", "Weigh-Out", "Delivered"];
+                  }
                   const isPhysPulse = shipStatus !== "eta";
 
                   return (
@@ -948,42 +953,48 @@ function AdminPortalContent() {
               {/* Timeline 2: Document Clearance Hub */}
               <div className="space-y-4 flex-1">
                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-                  Document Clearance Hub
+                  {impersonatedShipment.shipment_type === "domestic" ? "Domestic Docs Clearance" : "Document Clearance Hub"}
                 </div>
                 {(() => {
+                  const type = impersonatedShipment.shipment_type || "container";
                   const shipStatus = impersonatedShipment.status || (impersonatedShipment as any).shipment_status;
-                  const getDocActiveStage = (s: typeof impersonatedShipment) => {
+                  const getDocActiveIndex = (s: typeof impersonatedShipment, status: string) => {
                     if (s.doc_status) {
-                      if (s.doc_status === "get_booking") return "Book";
-                      if (s.doc_status === "preparing_docs") return "Prep";
-                      if (s.doc_status === "confirm_bl" || s.doc_status === "bl_stage") return "BL";
-                      if (s.doc_status === "confirm_draft_docs") return "Draft";
-                      if (s.doc_status === "all_ship_docs_completed") return "All Completed";
+                      if (s.doc_status === "get_booking") return 0;
+                      if (s.doc_status === "preparing_docs") return 1;
+                      if (s.doc_status === "confirm_bl" || s.doc_status === "bl_stage") return 2;
+                      if (s.doc_status === "confirm_draft_docs") return 3;
+                      if (s.doc_status === "all_ship_docs_completed") return 4;
                     }
-                    if (shipStatus === "eta" || (s.bl_approval_status === "approved" && s.shipping_docs_link)) {
-                      return "All Completed";
+                    if (status === "eta" || (s.bl_approval_status === "approved" && s.shipping_docs_link)) {
+                      return 4;
                     }
                     if (s.bl_approval_status === "approved" || s.bl_draft_link) {
-                      return "Draft";
+                      return 3;
                     }
-                    if (s.booking_no || shipStatus === "awaiting_bl_confirmation" || shipStatus === "awaiting_all_docs") {
-                      return "BL";
+                    if (s.booking_no || status === "awaiting_bl_confirmation" || status === "awaiting_all_docs") {
+                      return 2;
                     }
-                    if (shipStatus === "pending_production") {
-                      return "Book";
+                    if (status === "pending_production") {
+                      return 0;
                     }
-                    return "Prep";
+                    return 1;
                   };
-                  const activeDocStage = getDocActiveStage(impersonatedShipment);
+                  const activeDocIndex = getDocActiveIndex(impersonatedShipment, shipStatus || "");
                   const docActiveStatus = impersonatedShipment.doc_status || (
-                    activeDocStage === "All Completed" ? "all_ship_docs_completed" :
-                    activeDocStage === "Draft" ? "confirm_draft_docs" :
-                    activeDocStage === "BL" ? "confirm_bl" :
-                    activeDocStage === "Prep" ? "preparing_docs" : "get_booking"
+                    activeDocIndex === 4 ? "all_ship_docs_completed" :
+                    activeDocIndex === 3 ? "confirm_draft_docs" :
+                    activeDocIndex === 2 ? "confirm_bl" :
+                    activeDocIndex === 1 ? "preparing_docs" : "get_booking"
                   );
                   const isDocPulse = docActiveStatus !== "all_ship_docs_completed";
-                  const docStages = ["Book", "Prep", "BL", "Draft", "All Completed"];
-                  const activeDocIndex = docStages.indexOf(activeDocStage);
+                  
+                  let docStages = ["Book", "Prep", "BL", "Draft", "All Completed"];
+                  if (type === "bulk") {
+                    docStages = ["Fixture Note", "Prep Docs", "Mate's Receipt", "Draft", "All Completed"];
+                  } else if (type === "domestic") {
+                    docStages = ["PO Issued", "Weight Ticket", "Delivery Order", "Invoice", "Paid"];
+                  }
 
                   return (
                     <div className="relative w-full pt-2 pb-8 px-8">

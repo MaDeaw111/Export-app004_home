@@ -69,6 +69,7 @@ CREATE TABLE public.shipments (
     seal_no TEXT,
     forwarder_id TEXT,
     vessel_voyage TEXT,
+    shipment_type TEXT CHECK (shipment_type IN ('container', 'bulk', 'domestic')) DEFAULT 'container',
     etd_date DATE,
     eta_date DATE,
     bl_draft_link TEXT,
@@ -223,19 +224,19 @@ INSERT INTO public.purchase_orders (po_no, customer_id, po_date, total_amount_us
 ('PO-2604-D', 'CUST-03', '2026-05-20', 98000.00, '60 Days Net', 'SALES-02');
 
 -- C. SEED SHIPMENTS (Delivery Instructions)
-INSERT INTO public.shipments (di_no, po_no, status, product_id, quantity_tons, container_no, seal_no, forwarder_id, vessel_voyage, etd_date, eta_date, bl_draft_link, shipping_docs_link, booking_no, invoice_no, container_size, bl_approval_status, bl_feedback) VALUES
+INSERT INTO public.shipments (di_no, po_no, status, product_id, quantity_tons, container_no, seal_no, forwarder_id, vessel_voyage, shipment_type, etd_date, eta_date, bl_draft_link, shipping_docs_link, booking_no, invoice_no, container_size, bl_approval_status, bl_feedback) VALUES
 -- Apex PO-2601-A Shipments
-('DI-2601-A1', 'PO-2601-A', 'pending_production', 'PROD-AUSTENITE-22', 50.000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'WCAT001', '20\'', 'pending', NULL),
-('DI-2601-A2', 'PO-2601-A', 'loaded_into_container', 'PROD-FERRITIC-11', 25.500, 'MSCU9827361', 'SEAL-992837', 'Maersk Logistics', 'MAERSK MC-KINNEY MØLLER / Voyage 2601W', '2026-06-01', '2026-06-20', NULL, NULL, 'BK-2601-99', 'WCAT002', '40\'', 'pending', NULL),
-('DI-2601-A3', 'PO-2601-A', 'awaiting_bl_confirmation', 'PROD-DUPLEX-05', 40.000, 'CMAU2819283', 'SEAL-228192', 'CMA CGM', 'CMA CGM MARCO POLO / Voyage 2602E', '2026-05-28', '2026-06-15', 'https://example.com/drafts/bl-2601-a3.pdf', NULL, 'BK-2601-88', 'WCAT003', '40\' HQ', 'pending', NULL),
-('DI-2601-A4', 'PO-2601-A', 'eta', 'PROD-AUSTENITE-22', 20.000, 'OOCL8827182', 'SEAL-882736', 'OOCL', 'OOCL HONG KONG / Voyage 2603N', '2026-05-12', '2026-05-24', 'https://example.com/drafts/bl-approved.pdf', 'https://example.com/docs/shipping-docs-2601-a4.zip', 'BK-2601-77', 'WCAT004', '20\'', 'approved', 'Draft looks perfect! Passed inspection.'),
+('DI-2601-A1', 'PO-2601-A', 'pending_production', 'PROD-AUSTENITE-22', 50.000, NULL, NULL, NULL, NULL, 'container', NULL, NULL, NULL, NULL, NULL, 'WCAT001', '20\'', 'pending', NULL),
+('DI-2601-A2', 'PO-2601-A', 'loaded_into_container', 'PROD-FERRITIC-11', 25.500, 'MSCU9827361', 'SEAL-992837', 'Maersk Logistics', 'MAERSK MC-KINNEY MØLLER / Voyage 2601W', 'container', '2026-06-01', '2026-06-20', NULL, NULL, 'BK-2601-99', 'WCAT002', '40\'', 'pending', NULL),
+('DI-2601-A3', 'PO-2601-A', 'awaiting_bl_confirmation', 'PROD-DUPLEX-05', 40.000, 'CMAU2819283', 'SEAL-228192', 'CMA CGM', 'CMA CGM MARCO POLO / Voyage 2602E', 'bulk', '2026-05-28', '2026-06-15', 'https://example.com/drafts/bl-2601-a3.pdf', NULL, 'BK-2601-88', 'WCAT003', '40\' HQ', 'pending', NULL),
+('DI-2601-A4', 'PO-2601-A', 'eta', 'PROD-AUSTENITE-22', 20.000, 'OOCL8827182', 'SEAL-882736', 'OOCL', 'OOCL HONG KONG / Voyage 2603N', 'domestic', '2026-05-12', '2026-05-24', 'https://example.com/drafts/bl-approved.pdf', 'https://example.com/docs/shipping-docs-2601-a4.zip', 'BK-2601-77', 'WCAT004', '20\'', 'approved', 'Draft looks perfect! Passed inspection.'),
 
 -- Apex PO-2602-B Shipments
-('DI-2602-B1', 'PO-2602-B', 'pending_packaging', 'PROD-NICKEL-88', 12.000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'WCAT005', '40\'', 'pending', NULL),
+('DI-2602-B1', 'PO-2602-B', 'pending_packaging', 'PROD-NICKEL-88', 12.000, NULL, NULL, NULL, NULL, 'container', NULL, NULL, NULL, NULL, NULL, 'WCAT005', '40\'', 'pending', NULL),
 
 -- Vortex PO-2603-C Shipments
-('DI-2603-C1', 'PO-2603-C', 'awaiting_loading', 'PROD-SPECIAL-09', 100.000, NULL, NULL, 'DHL Global', 'MV. COSCO SHIPPING / V.240E', '2026-06-05', '2026-06-30', NULL, NULL, NULL, 'WCAT006', '40\' HQ', 'pending', NULL),
-('DI-2603-C2', 'PO-2603-C', 'awaiting_all_docs', 'PROD-SPECIAL-09', 150.000, 'HLXU1182736', 'SEAL-110293', 'Hapag-Lloyd', 'HAPAG-LLOYD AL DAHNA / Voyage 2605W', '2026-05-20', '2026-06-18', 'https://example.com/drafts/bl-vortex-approved.pdf', NULL, 'BK-2603-12', 'WCAT007', '20\'', 'approved', 'B/L confirmed by Hans Müller.'),
+('DI-2603-C1', 'PO-2603-C', 'awaiting_loading', 'PROD-SPECIAL-09', 100.000, NULL, NULL, 'DHL Global', 'MV. COSCO SHIPPING / V.240E', 'bulk', '2026-06-05', '2026-06-30', NULL, NULL, NULL, 'WCAT006', '40\' HQ', 'pending', NULL),
+('DI-2603-C2', 'PO-2603-C', 'awaiting_all_docs', 'PROD-SPECIAL-09', 150.000, 'HLXU1182736', 'SEAL-110293', 'Hapag-Lloyd', 'HAPAG-LLOYD AL DAHNA / Voyage 2605W', 'container', '2026-05-20', '2026-06-18', 'https://example.com/drafts/bl-vortex-approved.pdf', NULL, 'BK-2603-12', 'WCAT007', '20\'', 'approved', 'B/L confirmed by Hans Müller.'),
 
 -- Oceanic PO-2604-D Shipments
-('DI-2604-D1', 'PO-2604-D', 'etd', 'PROD-TITANIUM-04', 15.000, 'ONEU7728362', 'SEAL-773829', 'ONE Line', 'ONE APUS / Voyage 2606E', '2026-05-22', '2026-06-02', 'https://example.com/drafts/bl-oceanic.pdf', 'https://example.com/docs/oceanic-docs.zip', 'BK-2604-04', 'WCAT008', '40\' HQ', 'approved', NULL);
+('DI-2604-D1', 'PO-2604-D', 'etd', 'PROD-TITANIUM-04', 15.000, 'ONEU7728362', 'SEAL-773829', 'ONE Line', 'ONE APUS / Voyage 2606E', 'domestic', '2026-05-22', '2026-06-02', 'https://example.com/drafts/bl-oceanic.pdf', 'https://example.com/docs/oceanic-docs.zip', 'BK-2604-04', 'WCAT008', '40\' HQ', 'approved', NULL);
