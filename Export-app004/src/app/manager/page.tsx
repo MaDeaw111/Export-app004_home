@@ -47,6 +47,7 @@ function ManagerPortalContent() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductFilter, setSelectedProductFilter] = useState("all");
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   useEffect(() => {
     // Theme setup
@@ -190,6 +191,39 @@ function ManagerPortalContent() {
       };
     });
   }, [shipments]);
+
+  // 5. Selected Country Portfolio Breakdown for interactive drill-down popup
+  const selectedCountryPortfolio = useMemo(() => {
+    if (!selectedCountry) return [];
+
+    // Filter shipments going to the selected country
+    const countryShipments = shipments.filter(s => {
+      const country = s.destination_country || "United States";
+      return country.toLowerCase() === selectedCountry.toLowerCase();
+    });
+
+    const productMap: Record<string, { volume: number; value: number }> = {};
+    let totalVolume = 0;
+
+    countryShipments.forEach(s => {
+      const prod = s.product_info || "Tapioca Flour Extra";
+      const vol = s.weight_mt || s.quantity_tons || 0;
+      const val = s.contract_value || 0;
+      if (!productMap[prod]) {
+        productMap[prod] = { volume: 0, value: 0 };
+      }
+      productMap[prod].volume += vol;
+      productMap[prod].value += val;
+      totalVolume += vol;
+    });
+
+    return Object.entries(productMap).map(([name, data]) => ({
+      name,
+      volume: data.volume,
+      value: data.value,
+      percentage: totalVolume > 0 ? (data.volume / totalVolume) * 100 : 0
+    })).sort((a, b) => b.volume - a.volume);
+  }, [selectedCountry, shipments]);
 
   // Retrieve customer name for a shipment
   const getCustomerName = (poNo: string) => {
@@ -449,7 +483,7 @@ function ManagerPortalContent() {
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-2">
                 <Globe className="w-4 h-4 text-cyan-400" /> Interactive Global Shipments Map
               </h3>
-              <p className="text-[10px] text-slate-500 mt-1">Real-time tonnage distribution and commercial exposure overlay</p>
+              <p className="text-[10px] text-slate-500 mt-1">Real-time tonnage distribution and commercial exposure overlay (Click for details)</p>
             </div>
             
             <div className="flex flex-wrap items-center gap-6 text-[10px] font-semibold text-slate-400 font-mono">
@@ -538,13 +572,17 @@ function ManagerPortalContent() {
 
               {/* Dynamic pulsing dots and visual labels */}
               {mapDestinations.map((dest) => (
-                <g key={dest.name} className="cursor-pointer group">
+                <g 
+                  key={dest.name} 
+                  className="cursor-pointer group"
+                  onClick={() => setSelectedCountry(dest.name)}
+                >
                   {/* Glowing pulsing halo 1 */}
                   <circle
                     cx={dest.x}
                     cy={dest.y}
                     r={dest.radius * 2}
-                    className="fill-emerald-500/10 stroke-emerald-500/20 animate-pulse"
+                    className="fill-emerald-500/10 stroke-emerald-500/20 animate-pulse group-hover:scale-110 transition-transform duration-300"
                   />
                   {/* Radial ping ring */}
                   <circle
@@ -562,7 +600,7 @@ function ManagerPortalContent() {
                     cx={dest.x}
                     cy={dest.y}
                     r={dest.radius * 0.55}
-                    className="fill-emerald-400 stroke-emerald-300 stroke-[1.5] shadow-lg shadow-emerald-500/35"
+                    className="fill-emerald-400 stroke-emerald-300 stroke-[1.5] shadow-lg shadow-emerald-500/35 group-hover:fill-emerald-300 transition-colors"
                   />
                   {/* Clean text backdrop box for high readability */}
                   <rect
@@ -571,7 +609,7 @@ function ManagerPortalContent() {
                     width={dest.name.length * 7 + 10}
                     height={16}
                     rx={4}
-                    className="fill-slate-950/70 dark:fill-slate-900/80 stroke-slate-900/40 dark:stroke-slate-800/40"
+                    className="fill-slate-950/70 dark:fill-slate-900/80 stroke-slate-900/40 dark:stroke-slate-800/40 group-hover:fill-slate-900/90 dark:group-hover:fill-slate-800/90 transition-colors"
                     strokeWidth="0.5"
                   />
                   {/* Country Name text */}
@@ -593,6 +631,65 @@ function ManagerPortalContent() {
                 </g>
               ))}
             </svg>
+
+            {/* Drill-down popover card rendered inside map panel bounds */}
+            {selectedCountry && (
+              <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/65 backdrop-blur-[3px] flex items-center justify-center z-40 p-4 transition-all duration-300">
+                <div 
+                  className="w-full max-w-md rounded-2xl border p-5 sm:p-6 shadow-2xl relative transition-all duration-300 
+                    bg-white border-slate-200 text-slate-800 
+                    dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
+                >
+                  {/* Header Row */}
+                  <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-200 dark:border-slate-850">
+                    <h4 className="text-xs font-mono font-extrabold tracking-wider uppercase flex items-center gap-2 text-[#1A2B49] dark:text-white">
+                      <Globe className="w-4 h-4 text-cyan-500" /> {selectedCountry} Export Portfolio
+                    </h4>
+                    <button 
+                      onClick={() => setSelectedCountry(null)}
+                      className="p-1 rounded-lg transition-all text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-850 cursor-pointer"
+                      title="Close Portfolio View"
+                    >
+                      <span className="text-xs font-bold font-mono">✕</span>
+                    </button>
+                  </div>
+
+                  {/* Portfolio Breakdown Table Layout */}
+                  <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
+                    {selectedCountryPortfolio.length === 0 ? (
+                      <p className="text-xs text-slate-500 font-medium text-center py-6">
+                        No active product exports detected for {selectedCountry}.
+                      </p>
+                    ) : (
+                      selectedCountryPortfolio.map((item, idx) => (
+                        <div key={idx} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="truncate max-w-[180px]">{item.name}</span>
+                            <div className="text-right flex items-center gap-1.5">
+                              <span className="font-bold text-slate-900 dark:text-white font-mono">{item.volume.toFixed(1)} MT</span>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">(${item.value.toLocaleString()})</span>
+                            </div>
+                          </div>
+                          {/* Horizontal relative volume progress bar */}
+                          <div className="w-full h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850/60">
+                            <div 
+                              className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-blue-500 dark:from-emerald-500 dark:to-cyan-400 transition-all duration-500"
+                              style={{ width: `${item.percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Portfolio Footer Summary */}
+                  <div className="mt-5 pt-3 border-t border-slate-200 dark:border-slate-850 flex justify-between items-center text-[9px] text-slate-400 dark:text-slate-500 font-mono select-none">
+                    <span>ACTIVE TRACKING LOGISTICS</span>
+                    <span>TOTAL: {selectedCountryPortfolio.reduce((sum, i) => sum + i.volume, 0).toFixed(1)} MT</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
