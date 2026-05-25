@@ -477,6 +477,7 @@ function AdminPortalContent() {
 
     // Dynamic Heatmap loading sum logic (calculates sum of allocated containers on that day using specific splits if configured)
     const containersCount = dayShipments.reduce((sum, s) => {
+      if (s.shipment_type === "bulk") return sum;
       let qty = s.container_qty || 1;
       if (s.loading_splits && s.loading_splits.length > 0) {
         const matchingSplit = s.loading_splits.find(sp => sp.date === dateString);
@@ -726,7 +727,10 @@ function AdminPortalContent() {
 
                     {/* Line 1: DI Number and booking alert/checkmark */}
                     <div className="font-bold text-slate-100 group-hover:text-blue-400 transition-all leading-tight truncate flex items-center justify-between">
-                      <span className="truncate">{ship.di_no}</span>
+                      <span className="truncate flex items-center gap-1">
+                        {ship.shipment_type === "bulk" && <span className="text-[10px] text-blue-400 shrink-0" title="Bulk Vessel">🚢</span>}
+                        {ship.di_no}
+                      </span>
                       {ship.booking_no ? (
                         <span className="text-[7px] text-emerald-400 shrink-0 animate-pulse" title={`Booking: ${ship.booking_no}`}>✅</span>
                       ) : (
@@ -958,7 +962,7 @@ function AdminPortalContent() {
                                     isActive 
                                       ? "text-emerald-400 font-extrabold" 
                                       : isCompleted 
-                                        ? "text-slate-300 font-semibold" 
+                                        ? "text-[#1A2B49] dark:text-slate-300 font-semibold" 
                                         : "text-slate-600 font-medium"
                                   }`}
                                 >
@@ -1071,7 +1075,7 @@ function AdminPortalContent() {
                                     isActive 
                                       ? "text-emerald-400 font-extrabold" 
                                       : isCompleted 
-                                        ? "text-slate-300 font-semibold" 
+                                        ? "text-[#1A2B49] dark:text-slate-300 font-semibold" 
                                         : "text-slate-600 font-medium"
                                   }`}
                                 >
@@ -2496,107 +2500,259 @@ function AdminPortalContent() {
                         Equipment & Dispatch Logistics
                       </h4>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Container Size */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Container Size
-                          </label>
-                          <select
-                            value={editingDI.container_size || ""}
-                            onChange={(e) => setEditingDI({ ...editingDI, container_size: e.target.value })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="">-- Choose Size --</option>
-                            <option value="20'">20'</option>
-                            <option value="40'">40'</option>
-                            <option value="40' HQ">40' HQ</option>
-                          </select>
-                        </div>
-
-                        {/* Container Quantity */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Container Quantity
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="999"
-                            step="1"
-                            placeholder="e.g. 3"
-                            value={editingDI.container_qty || 1}
-                            onChange={(e) => setEditingDI({ ...editingDI, container_qty: Number(e.target.value) })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
+                      {/* Shipment Type Selector */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Shipment Mode / Type
+                        </label>
+                        <select
+                          value={editingDI.shipment_type || "container"}
+                          onChange={(e) => setEditingDI({ ...editingDI, shipment_type: e.target.value as any })}
+                          className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer font-bold"
+                        >
+                          <option value="container">📦 Container Loading</option>
+                          <option value="bulk">🚢 Bulk Vessel Transit</option>
+                          <option value="domestic">🚛 Truck Logistics</option>
+                        </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Container Serial No. */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Container Serial No.
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. MSCU9827"
-                            value={editingDI.container_no || ""}
-                            onChange={(e) => setEditingDI({ ...editingDI, container_no: e.target.value })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
+                      {/* Conditional Fields based on Shipment Type Selector */}
+                      {(editingDI.shipment_type === "container" || !editingDI.shipment_type) && (
+                        <div className="space-y-4 animate-fade-in">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Container Size */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Container Size
+                              </label>
+                              <select
+                                value={editingDI.container_size || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_size: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="">-- Choose Size --</option>
+                                <option value="20'">20'</option>
+                                <option value="40'">40'</option>
+                                <option value="40' HQ">40' HQ</option>
+                              </select>
+                            </div>
 
-                        {/* Forwarder Seal No. */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Forwarder Seal No.
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. SEAL-9928"
-                            value={editingDI.seal_no || ""}
-                            onChange={(e) => setEditingDI({ ...editingDI, seal_no: e.target.value })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
+                            {/* Container Quantity */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Container Quantity
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="999"
+                                step="1"
+                                placeholder="e.g. 3"
+                                value={editingDI.container_qty || 1}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_qty: Number(e.target.value) })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Forwarder Booking */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Forwarder Booking
-                          </label>
-                          <select
-                            value={editingDI.forwarder_id || ""}
-                            onChange={(e) => setEditingDI({ ...editingDI, forwarder_id: e.target.value })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="">-- Choose Forwarder --</option>
-                            {FORWARDERS.map(f => (
-                              <option key={f} value={f}>{f}</option>
-                            ))}
-                          </select>
-                        </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Container Serial No. */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Container Serial No.
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. MSCU9827"
+                                value={editingDI.container_no || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_no: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
 
-                        {/* Vessel / Voyage assign */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            Vessel / Voyage Assign
-                          </label>
-                          <select
-                            value={editingDI.vessel_voyage || ""}
-                            onChange={(e) => setEditingDI({ ...editingDI, vessel_voyage: e.target.value })}
-                            className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
-                          >
-                            <option value="">-- Choose Vessel / Voyage --</option>
-                            {VESSELS.map(v => (
-                              <option key={v} value={v}>{v}</option>
-                            ))}
-                          </select>
+                            {/* Forwarder Seal No. */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Forwarder Seal No.
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. SEAL-9928"
+                                value={editingDI.seal_no || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, seal_no: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Forwarder Booking */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Forwarder Booking
+                              </label>
+                              <select
+                                value={editingDI.forwarder_id || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, forwarder_id: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="">-- Choose Forwarder --</option>
+                                {FORWARDERS.map(f => (
+                                  <option key={f} value={f}>{f}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Vessel / Voyage assign */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Vessel / Voyage Assign
+                              </label>
+                              <select
+                                value={editingDI.vessel_voyage || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, vessel_voyage: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="">-- Choose Vessel / Voyage --</option>
+                                {VESSELS.map(v => (
+                                  <option key={v} value={v}>{v}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {editingDI.shipment_type === "bulk" && (
+                        <div className="space-y-4 animate-fade-in">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Vessel / Voyage Name */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Vessel / Voyage Name
+                              </label>
+                              <select
+                                value={editingDI.vessel_voyage || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, vessel_voyage: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer font-medium"
+                              >
+                                <option value="">-- Choose Vessel / Voyage --</option>
+                                {VESSELS.map(v => (
+                                  <option key={v} value={v}>{v}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Barge Quantity */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Barge Quantity
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                placeholder="e.g. 2"
+                                value={editingDI.container_qty || 1}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_qty: Number(e.target.value) })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Barge ID */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Barge ID / Name
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. BG-901 / BG-902"
+                                value={editingDI.container_no || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_no: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                              />
+                            </div>
+
+                            {/* Barge Loading Point */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Barge Loading Point
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. WH-B / Sichang Anchorage"
+                                value={editingDI.seal_no || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, seal_no: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Stevedore PIC */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                              Stevedore PIC
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Pai / Ae"
+                              value={editingDI.forwarder_id || ""}
+                              onChange={(e) => setEditingDI({ ...editingDI, forwarder_id: e.target.value })}
+                              className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {editingDI.shipment_type === "domestic" && (
+                        <div className="space-y-4 animate-fade-in">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Truck License Plate */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Truck License Plate
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. 70-1234 BKK"
+                                value={editingDI.container_no || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, container_no: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                              />
+                            </div>
+
+                            {/* Warehouse Terminal/Gate */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Warehouse Terminal / Gate
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Terminal 2, Gate B"
+                                value={editingDI.forwarder_id || ""}
+                                onChange={(e) => setEditingDI({ ...editingDI, forwarder_id: e.target.value })}
+                                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Driver Name & Phone */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                              Driver Name & Phone
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Somchai (081-234-5678)"
+                              value={editingDI.seal_no || ""}
+                              onChange={(e) => setEditingDI({ ...editingDI, seal_no: e.target.value })}
+                              className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Loading Schedule Splitter */}
@@ -2775,11 +2931,29 @@ function AdminPortalContent() {
                           onChange={(e) => setEditingDI({ ...editingDI, doc_status: e.target.value as any })}
                           className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                         >
-                          <option value="get_booking">Booking Confirmation Received (Book)</option>
-                          <option value="preparing_docs">Preparing Documents (Prep)</option>
-                          <option value="confirm_bl">Confirm Bill of Lading (BL)</option>
-                          <option value="confirm_draft_docs">Confirm Draft Docs (Draft)</option>
-                          <option value="all_ship_docs_completed">All Shipping Docs Completed (Completed)</option>
+                          {editingDI.shipment_type === "bulk" ? (
+                            <>
+                              <option value="get_booking">PO Issued (Book)</option>
+                              <option value="preparing_docs">WH Weight (Prep)</option>
+                              <option value="confirm_bl">Draft Docs (BL)</option>
+                              <option value="all_ship_docs_completed">All Ship Docs (Completed)</option>
+                            </>
+                          ) : editingDI.shipment_type === "domestic" ? (
+                            <>
+                              <option value="get_booking">PO Issued (Book)</option>
+                              <option value="preparing_docs">Delivery Order (Prep)</option>
+                              <option value="confirm_bl">Invoice (BL)</option>
+                              <option value="all_ship_docs_completed">Paid (Completed)</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="get_booking">Booking Confirmation Received (Book)</option>
+                              <option value="preparing_docs">Preparing Documents (Prep)</option>
+                              <option value="confirm_bl">Confirm Bill of Lading (BL)</option>
+                              <option value="confirm_draft_docs">Confirm Draft Docs (Draft)</option>
+                              <option value="all_ship_docs_completed">All Shipping Docs Completed (Completed)</option>
+                            </>
+                          )}
                         </select>
                       </div>
 

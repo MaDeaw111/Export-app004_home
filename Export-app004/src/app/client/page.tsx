@@ -441,7 +441,7 @@ function ClientPortalContent() {
                                                       isActive 
                                                         ? "text-emerald-400 font-extrabold" 
                                                         : isCompleted 
-                                                          ? "text-slate-300 font-semibold" 
+                                                          ? "text-[#1A2B49] dark:text-slate-300 font-semibold" 
                                                           : "text-slate-600 font-medium"
                                                     }`}
                                                   >
@@ -554,7 +554,7 @@ function ClientPortalContent() {
                                                       isActive 
                                                         ? "text-emerald-400 font-extrabold" 
                                                         : isCompleted 
-                                                          ? "text-slate-300 font-semibold" 
+                                                          ? "text-[#1A2B49] dark:text-slate-300 font-semibold" 
                                                           : "text-slate-600 font-medium"
                                                     }`}
                                                   >
