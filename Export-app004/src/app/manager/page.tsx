@@ -209,12 +209,24 @@ function ManagerPortalContent() {
 
   // Chart 1: Monthly Export Volume (MT)
   const monthlyVolumes = useMemo(() => {
-    const vols = { Jan: 120, Feb: 150, Mar: 210, Apr: 180, May: 240, Jun: 310 };
+    // Base defaults for JAN-MAY, strictly 0 for JUN-DEC future months
+    const vols = { 
+      Jan: 120, Feb: 150, Mar: 210, Apr: 180, May: 240, 
+      Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 
+    };
     
     // Aggregate live data volume if etd_date matches
     filteredShipmentsForCharts.forEach(s => {
       if (!s.etd_date) return;
-      const monthIdx = new Date(s.etd_date).getMonth();
+      const d = new Date(s.etd_date);
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth();
+      
+      // Strict 0-drop for June 2026 onwards (assuming current year is 2026)
+      if (year > 2026 || (year === 2026 && monthIdx >= 5)) {
+        return; // June 2026 onwards strictly remains 0
+      }
+
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const mName = monthNames[monthIdx];
       const vol = s.weight_mt || s.quantity_tons || 0;
@@ -248,23 +260,34 @@ function ManagerPortalContent() {
 
   // Chart 3: Monthly Price Index ($/MT) - Multi-Product Trends
   const monthlyPriceIndex = useMemo(() => {
-    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
-    
-    // Base template with realistic historical defaults
+    // Base template with realistic historical defaults for JAN-MAY, and strictly 0 for JUN-DEC
     const data = [
       { month: "JAN", tapioca: 610, sweetPotato: 520, pumpkin: 710, pearls: 650, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
       { month: "FEB", tapioca: 630, sweetPotato: 540, pumpkin: 730, pearls: 660, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
       { month: "MAR", tapioca: 645, sweetPotato: 580, pumpkin: 720, pearls: 690, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
       { month: "APR", tapioca: 670, sweetPotato: 570, pumpkin: 750, pearls: 710, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
       { month: "MAY", tapioca: 690, sweetPotato: 610, pumpkin: 780, pearls: 730, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
-      { month: "JUN", tapioca: 720, sweetPotato: 640, pumpkin: 810, pearls: 760, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } }
+      { month: "JUN", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "JUL", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "AUG", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "SEP", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "OCT", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "NOV", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } },
+      { month: "DEC", tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0, counts: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 }, sums: { tapioca: 0, sweetPotato: 0, pumpkin: 0, pearls: 0 } }
     ];
 
     // Aggregate live database shipments if available
     filteredShipmentsForCharts.forEach(s => {
       if (!s.etd_date) return;
-      const monthIdx = new Date(s.etd_date).getMonth();
-      if (monthIdx < 0 || monthIdx > 5) return; // Only JAN-JUN
+      const d = new Date(s.etd_date);
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth();
+      if (monthIdx < 0 || monthIdx > 11) return;
+      
+      // Strict 0-drop for June 2026 onwards
+      if (year > 2026 || (year === 2026 && monthIdx >= 5)) {
+        return; // June 2026 onwards strictly remains 0
+      }
       
       const vol = s.weight_mt || s.quantity_tons || 0;
       const val = s.contract_value || 0;
@@ -285,13 +308,25 @@ function ManagerPortalContent() {
     });
 
     // Compute averages, falling back to defaults if no live data
-    return data.map(m => ({
-      month: m.month,
-      tapioca: m.counts.tapioca > 0 ? Math.round(m.sums.tapioca / m.counts.tapioca) : m.tapioca,
-      sweetPotato: m.counts.sweetPotato > 0 ? Math.round(m.sums.sweetPotato / m.counts.sweetPotato) : m.sweetPotato,
-      pumpkin: m.counts.pumpkin > 0 ? Math.round(m.sums.pumpkin / m.counts.pumpkin) : m.pumpkin,
-      pearls: m.counts.pearls > 0 ? Math.round(m.sums.pearls / m.counts.pearls) : m.pearls
-    }));
+    return data.map((m, idx) => {
+      if (idx >= 5) {
+        // JUN-DEC strictly drop to 0
+        return {
+          month: m.month,
+          tapioca: 0,
+          sweetPotato: 0,
+          pumpkin: 0,
+          pearls: 0
+        };
+      }
+      return {
+        month: m.month,
+        tapioca: m.counts.tapioca > 0 ? Math.round(m.sums.tapioca / m.counts.tapioca) : m.tapioca,
+        sweetPotato: m.counts.sweetPotato > 0 ? Math.round(m.sums.sweetPotato / m.counts.sweetPotato) : m.sweetPotato,
+        pumpkin: m.counts.pumpkin > 0 ? Math.round(m.sums.pumpkin / m.counts.pumpkin) : m.pumpkin,
+        pearls: m.counts.pearls > 0 ? Math.round(m.sums.pearls / m.counts.pearls) : m.pearls
+      };
+    });
   }, [filteredShipmentsForCharts]);
 
   // Chart 4: Top 5 Products by Value ($)
@@ -668,10 +703,10 @@ function ManagerPortalContent() {
                             {item.vol.toFixed(1)} MT
                           </div>
                           <div 
-                            className="w-8 rounded-t bg-gradient-to-t from-[#059669] to-[#10b981] group-hover:from-[#047857] group-hover:to-[#34d399] transition-all duration-500 shadow-md shadow-emerald-500/10"
+                            className="w-4 sm:w-6 rounded-t bg-gradient-to-t from-[#059669] to-[#10b981] group-hover:from-[#047857] group-hover:to-[#34d399] transition-all duration-500 shadow-md shadow-emerald-500/10"
                             style={{ height: `${Math.max(pct, 5)}%` }}
                           ></div>
-                          <span className="absolute top-full mt-1.5 font-mono text-[9px] font-bold text-[#1A2B49] dark:text-slate-500 group-hover:text-[#1d4ed8] dark:group-hover:text-slate-350 tracking-wider">
+                          <span className="absolute top-full mt-1.5 font-mono text-[8px] font-bold text-[#1A2B49] dark:text-slate-500 group-hover:text-[#1d4ed8] dark:group-hover:text-slate-350 tracking-wider">
                             {item.month.toUpperCase()}
                           </span>
                         </div>
@@ -750,9 +785,11 @@ function ManagerPortalContent() {
                   {(() => {
                     const getPoints = (key: 'tapioca' | 'sweetPotato' | 'pumpkin' | 'pearls') => {
                       return monthlyPriceIndex.map((m, idx) => {
-                        const x = (idx / 5) * 100;
+                        const x = (idx / 11) * 100;
                         const price = m[key];
-                        const y = 90 - ((price - 400) / 500) * 80;
+                        // y values scaled from 0 to 1000 $/MT.
+                        // mapping P=0 to exactly 90 on baseline axis, and P=1000 to exactly 10.
+                        const y = 90 - (price / 1000) * 80;
                         return { x, y, val: price, month: m.month };
                       });
                     };
@@ -772,9 +809,9 @@ function ManagerPortalContent() {
                           <div 
                             className="absolute bg-slate-950/95 dark:bg-slate-900/95 border border-slate-850 dark:border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur z-20 pointer-events-none select-none transition-all duration-150 ease-out"
                             style={{
-                              left: `${(hoveredMonthIdx / 5) * 100}%`,
+                              left: `${(hoveredMonthIdx / 11) * 100}%`,
                               top: '0px',
-                              transform: hoveredMonthIdx > 3 ? 'translateX(-105%)' : hoveredMonthIdx < 2 ? 'translateX(5%)' : 'translateX(-50%)',
+                              transform: hoveredMonthIdx > 7 ? 'translateX(-105%)' : hoveredMonthIdx < 4 ? 'translateX(5%)' : 'translateX(-50%)',
                             }}
                           >
                             <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest font-mono mb-2">
@@ -844,18 +881,18 @@ function ManagerPortalContent() {
                           <path d={areaPath(pumpkinPoints)} fill="url(#pumpkinGrad)" className="transition-all duration-500" />
                           <path d={areaPath(pearlsPoints)} fill="url(#pearlsGrad)" className="transition-all duration-500" />
 
-                          {/* 4 Line Strokes */}
-                          <path d={linePath(tapiocaPoints)} fill="none" className="stroke-blue-500 transition-all duration-500" strokeWidth="1.5" />
-                          <path d={linePath(sweetPotatoPoints)} fill="none" className="stroke-purple-500 transition-all duration-500" strokeWidth="1.5" />
-                          <path d={linePath(pumpkinPoints)} fill="none" className="stroke-amber-500 transition-all duration-500" strokeWidth="1.5" />
-                          <path d={linePath(pearlsPoints)} fill="none" className="stroke-teal-500 transition-all duration-500" strokeWidth="1.5" />
+                          {/* 4 Line Strokes with high-fidelity strokeWidth: 2 */}
+                          <path d={linePath(tapiocaPoints)} fill="none" className="stroke-blue-500 transition-all duration-500" strokeWidth="2" />
+                          <path d={linePath(sweetPotatoPoints)} fill="none" className="stroke-purple-500 transition-all duration-500" strokeWidth="2" />
+                          <path d={linePath(pumpkinPoints)} fill="none" className="stroke-amber-500 transition-all duration-500" strokeWidth="2" />
+                          <path d={linePath(pearlsPoints)} fill="none" className="stroke-teal-500 transition-all duration-500" strokeWidth="2" />
 
                           {/* Hover Guideline */}
                           {hoveredMonthIdx !== null && (
                             <line 
-                              x1={(hoveredMonthIdx / 5) * 100} 
+                              x1={(hoveredMonthIdx / 11) * 100} 
                               y1="0" 
-                              x2={(hoveredMonthIdx / 5) * 100} 
+                              x2={(hoveredMonthIdx / 11) * 100} 
                               y2="100" 
                               className="stroke-slate-400/40 dark:stroke-slate-800/40" 
                               strokeDasharray="2" 
@@ -876,11 +913,11 @@ function ManagerPortalContent() {
                             );
                           })}
 
-                          {/* Invisible Trigger rects for hover interaction */}
+                          {/* Invisible Trigger rects for hover interaction (12 segments) */}
                           {monthlyPriceIndex.map((_, idx) => {
-                            const w = 100 / 5;
-                            const x = idx === 0 ? 0 : (idx / 5) * 100 - w / 2;
-                            const rectWidth = idx === 0 || idx === 5 ? w / 2 : w;
+                            const w = 100 / 11;
+                            const x = idx === 0 ? 0 : (idx / 11) * 100 - w / 2;
+                            const rectWidth = idx === 0 || idx === 11 ? w / 2 : w;
                             return (
                               <rect
                                 key={idx}
@@ -900,7 +937,7 @@ function ManagerPortalContent() {
                         {/* X-Axis Labels */}
                         <div className="absolute top-[102%] w-full flex justify-between px-0.5 text-slate-500 text-[9px] font-bold font-mono">
                           {monthlyPriceIndex.map((item, idx) => (
-                            <span key={idx} className="tracking-wider uppercase select-none text-[#1A2B49] dark:text-slate-500">{item.month}</span>
+                            <span key={idx} className="tracking-wider uppercase select-none text-[#1A2B49] dark:text-slate-500 text-[8px] sm:text-[9px]">{item.month}</span>
                           ))}
                         </div>
                       </div>
