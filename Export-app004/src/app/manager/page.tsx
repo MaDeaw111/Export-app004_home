@@ -210,32 +210,48 @@ function ManagerPortalContent() {
   // Chart 1: Monthly Export Volume (MT)
   const monthlyVolumes = useMemo(() => {
     // Base defaults for JAN-MAY, strictly 0 for JUN-DEC future months
-    const vols = { 
-      Jan: 120, Feb: 150, Mar: 210, Apr: 180, May: 240, 
-      Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 
-    };
-    
-    // Aggregate live data volume if etd_date matches
+    const data = [
+      { month: "JAN", container: 40, bulk: 50, domestic: 30 },
+      { month: "FEB", container: 50, bulk: 70, domestic: 30 },
+      { month: "MAR", container: 70, bulk: 90, domestic: 50 },
+      { month: "APR", container: 60, bulk: 80, domestic: 40 },
+      { month: "MAY", container: 80, bulk: 110, domestic: 50 },
+      { month: "JUN", container: 0, bulk: 0, domestic: 0 },
+      { month: "JUL", container: 0, bulk: 0, domestic: 0 },
+      { month: "AUG", container: 0, bulk: 0, domestic: 0 },
+      { month: "SEP", container: 0, bulk: 0, domestic: 0 },
+      { month: "OCT", container: 0, bulk: 0, domestic: 0 },
+      { month: "NOV", container: 0, bulk: 0, domestic: 0 },
+      { month: "DEC", container: 0, bulk: 0, domestic: 0 }
+    ];
+
+    // Aggregate live database shipments if available
     filteredShipmentsForCharts.forEach(s => {
       if (!s.etd_date) return;
       const d = new Date(s.etd_date);
       const year = d.getFullYear();
       const monthIdx = d.getMonth();
+      if (monthIdx < 0 || monthIdx > 11) return;
       
-      // Strict 0-drop for June 2026 onwards (assuming current year is 2026)
+      // Strict 0-drop for June 2026 onwards
       if (year > 2026 || (year === 2026 && monthIdx >= 5)) {
         return; // June 2026 onwards strictly remains 0
       }
-
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const mName = monthNames[monthIdx];
+      
       const vol = s.weight_mt || s.quantity_tons || 0;
-      if (mName in vols) {
-        vols[mName as keyof typeof vols] += vol;
+      const type = s.shipment_type || "container";
+      
+      let key: "container" | "bulk" | "domestic" | null = null;
+      if (type === "container") key = "container";
+      else if (type === "bulk") key = "bulk";
+      else if (type === "domestic" || type === "domestic_truck") key = "domestic";
+      
+      if (key) {
+        data[monthIdx][key] += vol;
       }
     });
-    
-    return Object.entries(vols).map(([month, vol]) => ({ month, vol }));
+
+    return data;
   }, [filteredShipmentsForCharts]);
 
   // Chart 2: Shipment Type Share (Pie/Donut segment calculations)
@@ -692,27 +708,191 @@ function ManagerPortalContent() {
             <div className="glass-panel p-5 rounded-2xl border border-slate-900/80 hover:border-slate-800 transition-all duration-300 flex flex-col justify-between min-h-[380px]">
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4 text-[#1A2B49] dark:text-slate-400">Monthly Export Volume (MT)</h4>
-                <div className="w-full h-[300px] flex items-end justify-between px-2 pt-2 pb-6 border-b border-slate-200/40 dark:border-slate-900/60 relative">
+                <div className="w-full h-[300px] relative border-b border-slate-200/40 dark:border-slate-900/60 pt-4 pb-6 px-1 flex items-end">
                   {(() => {
-                    const maxVol = Math.max(...monthlyVolumes.map(mv => mv.vol), 1);
-                    return monthlyVolumes.map((item, idx) => {
-                      const pct = (item.vol / maxVol) * 100;
-                      return (
-                        <div key={idx} className="flex flex-col items-center flex-1 group relative">
-                          <div className="absolute bottom-full mb-1 bg-slate-950 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none select-none z-10 whitespace-nowrap">
-                            {item.vol.toFixed(1)} MT
-                          </div>
+                    const topRoundedRectPath = (x: number, y: number, w: number, h: number, r: number) => {
+                      const radius = Math.min(r, h, w / 2);
+                      if (radius <= 0) {
+                        return `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`;
+                      }
+                      return `M ${x} ${y + radius} 
+                              A ${radius} ${radius} 0 0 1 ${x + radius} ${y} 
+                              L ${x + w - radius} ${y} 
+                              A ${radius} ${radius} 0 0 1 ${x + w} ${y + radius} 
+                              L ${x + w} ${y + h} 
+                              L ${x} ${y + h} Z`;
+                    };
+
+                    const maxVol = Math.max(
+                      ...monthlyVolumes.map(mv => Math.max(mv.container, mv.bulk, mv.domestic)),
+                      1
+                    );
+
+                    return (
+                      <div className="w-full h-full relative">
+                        {/* Hover Tooltip Overlay */}
+                        {hoveredMonthIdx !== null && (
                           <div 
-                            className="w-4 sm:w-6 rounded-t bg-gradient-to-t from-[#059669] to-[#10b981] group-hover:from-[#047857] group-hover:to-[#34d399] transition-all duration-500 shadow-md shadow-emerald-500/10"
-                            style={{ height: `${Math.max(pct, 5)}%` }}
-                          ></div>
-                          <span className="absolute top-full mt-1.5 font-mono text-[8px] font-bold text-[#1A2B49] dark:text-slate-500 group-hover:text-[#1d4ed8] dark:group-hover:text-slate-350 tracking-wider">
-                            {item.month.toUpperCase()}
-                          </span>
+                            className="absolute bg-slate-950/95 dark:bg-slate-900/95 border border-slate-850 dark:border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur z-20 pointer-events-none select-none transition-all duration-150 ease-out"
+                            style={{
+                              left: `${(hoveredMonthIdx * (100 / 12)) + (100 / 24)}%`,
+                              top: '0px',
+                              transform: hoveredMonthIdx > 7 ? 'translateX(-105%)' : hoveredMonthIdx < 4 ? 'translateX(5%)' : 'translateX(-50%)',
+                            }}
+                          >
+                            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest font-mono mb-2">
+                              {monthlyVolumes[hoveredMonthIdx].month} Volume Dossier
+                            </div>
+                            <div className="space-y-1.5 text-[11px] font-mono">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                                  Container:
+                                </span>
+                                <span className="font-extrabold text-white">{monthlyVolumes[hoveredMonthIdx].container.toFixed(1)} MT</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Bulk Vessel:
+                                </span>
+                                <span className="font-extrabold text-white">{monthlyVolumes[hoveredMonthIdx].bulk.toFixed(1)} MT</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-amber-500 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  Domestic:
+                                </span>
+                                <span className="font-extrabold text-white">{monthlyVolumes[hoveredMonthIdx].domestic.toFixed(1)} MT</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                          {/* Elegant horizontal background grid lines */}
+                          <line x1="0" y1="10" x2="100" y2="10" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="30" x2="100" y2="30" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="70" x2="100" y2="70" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="90" x2="100" y2="90" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+
+                          {/* Render Grouped Side-by-Side Bars for Shipment Types */}
+                          {monthlyVolumes.map((m, idx) => {
+                            const colWidth = 100 / 12;
+                            const xStart = idx * colWidth;
+                            
+                            // Group dimensions (Symmetric Centering)
+                            const w = 1.3; // Sleek professional width for 3 bars
+                            const g = 0.2; // Spacing gap
+                            const totalGroupWidth = 3 * w + 2 * g;
+                            const xGroupStart = xStart + (colWidth - totalGroupWidth) / 2;
+                            
+                            const getBarYAndHeight = (val: number) => {
+                              const y = 90 - (val / maxVol) * 80;
+                              const height = 90 - y;
+                              return { y, height };
+                            };
+
+                            const cData = getBarYAndHeight(m.container);
+                            const bData = getBarYAndHeight(m.bulk);
+                            const dData = getBarYAndHeight(m.domestic);
+
+                            return (
+                              <g key={idx}>
+                                {/* Container (Cyan #06b6d4) */}
+                                {cData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart, cData.y, w, cData.height, 0.4)} 
+                                    fill="#06b6d4" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                                
+                                {/* Bulk Vessel (Emerald Green #10b981) */}
+                                {bData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart + w + g, bData.y, w, bData.height, 0.4)} 
+                                    fill="#10b981" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                                
+                                {/* Domestic (Amber/Gold #f59e0b) */}
+                                {dData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart + 2 * (w + g), dData.y, w, dData.height, 0.4)} 
+                                    fill="#f59e0b" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                              </g>
+                            );
+                          })}
+
+                          {/* Hover Guideline */}
+                          {hoveredMonthIdx !== null && (
+                            <line 
+                              x1={(hoveredMonthIdx * (100 / 12)) + (100 / 24)} 
+                              y1="0" 
+                              x2={(hoveredMonthIdx * (100 / 12)) + (100 / 24)} 
+                              y2="100" 
+                              className="stroke-slate-400/40 dark:stroke-slate-800/40" 
+                              strokeDasharray="2" 
+                              strokeWidth="0.8" 
+                            />
+                          )}
+
+                          {/* Invisible Trigger rects for hover interaction (12 columns) */}
+                          {monthlyVolumes.map((_, idx) => {
+                            const colWidth = 100 / 12;
+                            const x = idx * colWidth;
+                            return (
+                              <rect
+                                key={idx}
+                                x={x}
+                                y="0"
+                                width={colWidth}
+                                height="100"
+                                fill="transparent"
+                                className="cursor-pointer pointer-events-auto"
+                                onMouseEnter={() => setHoveredMonthIdx(idx)}
+                                onMouseLeave={() => setHoveredMonthIdx(null)}
+                              />
+                            );
+                          })}
+                        </svg>
+
+                        {/* X-Axis Labels (Symmetrically Centered Under Columns) */}
+                        <div className="absolute top-[102%] w-full flex text-slate-500 text-[9px] font-bold font-mono select-none">
+                          {monthlyVolumes.map((item, idx) => (
+                            <span 
+                              key={idx} 
+                              className="flex-1 text-center tracking-wider uppercase text-[#1A2B49] dark:text-slate-500 text-[8px] sm:text-[9px]"
+                            >
+                              {item.month}
+                            </span>
+                          ))}
                         </div>
-                      );
-                    });
+                      </div>
+                    );
                   })()}
+                </div>
+
+                {/* Legend Below Chart */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mt-6 pt-4 border-t border-slate-200/40 dark:border-slate-900/40 text-[9px] sm:text-[10px] font-bold select-none">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-cyan-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Container</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Bulk Vessel</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-amber-500 shrink-0"></span>
+                    <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Domestic</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -783,24 +963,18 @@ function ManagerPortalContent() {
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono mb-4 text-[#1A2B49] dark:text-slate-400">Monthly Price Index ($/MT)</h4>
                 <div className="w-full h-[300px] relative border-b border-slate-200/40 dark:border-slate-900/60 pt-4 pb-6 px-1 flex items-end">
                   {(() => {
-                    const getPoints = (key: 'tapioca' | 'sweetPotato' | 'pumpkin' | 'pearls') => {
-                      return monthlyPriceIndex.map((m, idx) => {
-                        const x = (idx / 11) * 100;
-                        const price = m[key];
-                        // y values scaled from 0 to 1000 $/MT.
-                        // mapping P=0 to exactly 90 on baseline axis, and P=1000 to exactly 10.
-                        const y = 90 - (price / 1000) * 80;
-                        return { x, y, val: price, month: m.month };
-                      });
+                    const topRoundedRectPath = (x: number, y: number, w: number, h: number, r: number) => {
+                      const radius = Math.min(r, h, w / 2);
+                      if (radius <= 0) {
+                        return `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`;
+                      }
+                      return `M ${x} ${y + radius} 
+                              A ${radius} ${radius} 0 0 1 ${x + radius} ${y} 
+                              L ${x + w - radius} ${y} 
+                              A ${radius} ${radius} 0 0 1 ${x + w} ${y + radius} 
+                              L ${x + w} ${y + h} 
+                              L ${x} ${y + h} Z`;
                     };
-
-                    const tapiocaPoints = getPoints('tapioca');
-                    const sweetPotatoPoints = getPoints('sweetPotato');
-                    const pumpkinPoints = getPoints('pumpkin');
-                    const pearlsPoints = getPoints('pearls');
-
-                    const linePath = (pts: typeof tapiocaPoints) => pts.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-                    const areaPath = (pts: typeof tapiocaPoints) => `${linePath(pts)} L 100 100 L 0 100 Z`;
 
                     return (
                       <div className="w-full h-full relative">
@@ -809,7 +983,7 @@ function ManagerPortalContent() {
                           <div 
                             className="absolute bg-slate-950/95 dark:bg-slate-900/95 border border-slate-850 dark:border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur z-20 pointer-events-none select-none transition-all duration-150 ease-out"
                             style={{
-                              left: `${(hoveredMonthIdx / 11) * 100}%`,
+                              left: `${(hoveredMonthIdx * (100 / 12)) + (100 / 24)}%`,
                               top: '0px',
                               transform: hoveredMonthIdx > 7 ? 'translateX(-105%)' : hoveredMonthIdx < 4 ? 'translateX(5%)' : 'translateX(-50%)',
                             }}
@@ -819,29 +993,29 @@ function ManagerPortalContent() {
                             </div>
                             <div className="space-y-1.5 text-[11px] font-mono">
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-blue-400 font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                   Tapioca:
                                 </span>
                                 <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].tapioca}</span>
                               </div>
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-purple-400 font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                   Sweet Potato:
                                 </span>
                                 <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].sweetPotato}</span>
                               </div>
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-amber-400 font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span className="flex items-center gap-1.5 text-purple-400 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                   Pumpkin:
                                 </span>
                                 <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].pumpkin}</span>
                               </div>
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-teal-400 font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                                <span className="flex items-center gap-1.5 text-amber-500 font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                   Pearls:
                                 </span>
                                 <span className="font-extrabold text-white">${monthlyPriceIndex[hoveredMonthIdx].pearls}</span>
@@ -851,48 +1025,83 @@ function ManagerPortalContent() {
                         )}
 
                         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                          <defs>
-                            <linearGradient id="tapiocaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                            </linearGradient>
-                            <linearGradient id="sweetPotatoGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
-                            </linearGradient>
-                            <linearGradient id="pumpkinGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
-                            </linearGradient>
-                            <linearGradient id="pearlsGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
-                            </linearGradient>
-                          </defs>
+                          {/* Elegant, ultra-low opacity horizontal background grid lines */}
+                          <line x1="0" y1="10" x2="100" y2="10" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="30" x2="100" y2="30" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="70" x2="100" y2="70" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
+                          <line x1="0" y1="90" x2="100" y2="90" className="stroke-slate-800 opacity-[0.12] dark:opacity-[0.15]" strokeWidth="0.5" />
 
-                          {/* Grid Lines */}
-                          <line x1="0" y1="10" x2="100" y2="10" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
-                          <line x1="0" y1="50" x2="100" y2="50" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
-                          <line x1="0" y1="90" x2="100" y2="90" className="stroke-slate-200/20 dark:stroke-slate-800/20" strokeWidth="0.5" />
+                          {/* Render Grouped Side-by-Side Bars */}
+                          {monthlyPriceIndex.map((m, idx) => {
+                            const colWidth = 100 / 12;
+                            const xStart = idx * colWidth;
+                            
+                            // Group dimensions (Symmetric Centering)
+                            const w = 1.2; // Sleek professional width
+                            const g = 0.2; // Gap between bars
+                            const totalGroupWidth = 4 * w + 3 * g;
+                            const xGroupStart = xStart + (colWidth - totalGroupWidth) / 2;
+                            
+                            const getBarYAndHeight = (val: number) => {
+                              // If value is 0 (unrecorded/future), height must be 0
+                              const y = 90 - (val / 1000) * 80;
+                              const height = 90 - y;
+                              return { y, height };
+                            };
 
-                          {/* 4 Area Fills */}
-                          <path d={areaPath(tapiocaPoints)} fill="url(#tapiocaGrad)" className="transition-all duration-500" />
-                          <path d={areaPath(sweetPotatoPoints)} fill="url(#sweetPotatoGrad)" className="transition-all duration-500" />
-                          <path d={areaPath(pumpkinPoints)} fill="url(#pumpkinGrad)" className="transition-all duration-500" />
-                          <path d={areaPath(pearlsPoints)} fill="url(#pearlsGrad)" className="transition-all duration-500" />
+                            const tData = getBarYAndHeight(m.tapioca);
+                            const sData = getBarYAndHeight(m.sweetPotato);
+                            const pData = getBarYAndHeight(m.pumpkin);
+                            const peData = getBarYAndHeight(m.pearls);
 
-                          {/* 4 Line Strokes with high-fidelity strokeWidth: 2 */}
-                          <path d={linePath(tapiocaPoints)} fill="none" className="stroke-blue-500 transition-all duration-500" strokeWidth="2" />
-                          <path d={linePath(sweetPotatoPoints)} fill="none" className="stroke-purple-500 transition-all duration-500" strokeWidth="2" />
-                          <path d={linePath(pumpkinPoints)} fill="none" className="stroke-amber-500 transition-all duration-500" strokeWidth="2" />
-                          <path d={linePath(pearlsPoints)} fill="none" className="stroke-teal-500 transition-all duration-500" strokeWidth="2" />
+                            return (
+                              <g key={idx}>
+                                {/* Tapioca Flour (Vibrant Emerald Green #10b981) */}
+                                {tData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart, tData.y, w, tData.height, 0.4)} 
+                                    fill="#10b981" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                                
+                                {/* Sweet Potato Powder (Sleek Blue #3b82f6) */}
+                                {sData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart + w + g, sData.y, w, sData.height, 0.4)} 
+                                    fill="#3b82f6" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                                
+                                {/* Pumpkin Flour Organic (Deep Purple #a855f7) */}
+                                {pData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart + 2 * (w + g), pData.y, w, pData.height, 0.4)} 
+                                    fill="#a855f7" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                                
+                                {/* Amber/Other Products (Premium Gold/Orange #f59e0b) */}
+                                {peData.height > 0 && (
+                                  <path 
+                                    d={topRoundedRectPath(xGroupStart + 3 * (w + g), peData.y, w, peData.height, 0.4)} 
+                                    fill="#f59e0b" 
+                                    className="transition-all duration-300 hover:opacity-80"
+                                  />
+                                )}
+                              </g>
+                            );
+                          })}
 
                           {/* Hover Guideline */}
                           {hoveredMonthIdx !== null && (
                             <line 
-                              x1={(hoveredMonthIdx / 11) * 100} 
+                              x1={(hoveredMonthIdx * (100 / 12)) + (100 / 24)} 
                               y1="0" 
-                              x2={(hoveredMonthIdx / 11) * 100} 
+                              x2={(hoveredMonthIdx * (100 / 12)) + (100 / 24)} 
                               y2="100" 
                               className="stroke-slate-400/40 dark:stroke-slate-800/40" 
                               strokeDasharray="2" 
@@ -900,30 +1109,16 @@ function ManagerPortalContent() {
                             />
                           )}
 
-                          {/* Circular Nodes */}
+                          {/* Invisible Trigger rects for hover interaction (12 columns) */}
                           {monthlyPriceIndex.map((_, idx) => {
-                            const showActive = hoveredMonthIdx === idx;
-                            return (
-                              <g key={idx} className="transition-all duration-150">
-                                <circle cx={tapiocaPoints[idx].x} cy={tapiocaPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-blue-500 stroke-blue-300 stroke-[0.5]" />
-                                <circle cx={sweetPotatoPoints[idx].x} cy={sweetPotatoPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-purple-500 stroke-purple-300 stroke-[0.5]" />
-                                <circle cx={pumpkinPoints[idx].x} cy={pumpkinPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-amber-500 stroke-amber-300 stroke-[0.5]" />
-                                <circle cx={pearlsPoints[idx].x} cy={pearlsPoints[idx].y} r={showActive ? 2.5 : 1.5} className="fill-teal-500 stroke-teal-300 stroke-[0.5]" />
-                              </g>
-                            );
-                          })}
-
-                          {/* Invisible Trigger rects for hover interaction (12 segments) */}
-                          {monthlyPriceIndex.map((_, idx) => {
-                            const w = 100 / 11;
-                            const x = idx === 0 ? 0 : (idx / 11) * 100 - w / 2;
-                            const rectWidth = idx === 0 || idx === 11 ? w / 2 : w;
+                            const colWidth = 100 / 12;
+                            const x = idx * colWidth;
                             return (
                               <rect
                                 key={idx}
                                 x={x}
                                 y="0"
-                                width={rectWidth}
+                                width={colWidth}
                                 height="100"
                                 fill="transparent"
                                 className="cursor-pointer pointer-events-auto"
@@ -934,10 +1129,15 @@ function ManagerPortalContent() {
                           })}
                         </svg>
 
-                        {/* X-Axis Labels */}
-                        <div className="absolute top-[102%] w-full flex justify-between px-0.5 text-slate-500 text-[9px] font-bold font-mono">
+                        {/* X-Axis Labels (Symmetrically Centered Under Columns) */}
+                        <div className="absolute top-[102%] w-full flex text-slate-500 text-[9px] font-bold font-mono select-none">
                           {monthlyPriceIndex.map((item, idx) => (
-                            <span key={idx} className="tracking-wider uppercase select-none text-[#1A2B49] dark:text-slate-500 text-[8px] sm:text-[9px]">{item.month}</span>
+                            <span 
+                              key={idx} 
+                              className="flex-1 text-center tracking-wider uppercase text-[#1A2B49] dark:text-slate-500 text-[8px] sm:text-[9px]"
+                            >
+                              {item.month}
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -945,22 +1145,37 @@ function ManagerPortalContent() {
                   })()}
                 </div>
 
+                {/* Active Month Name Indicator */}
+                <div className="flex justify-center mt-4 text-[10px] sm:text-[11px] font-bold tracking-widest uppercase font-mono h-4 select-none">
+                  {hoveredMonthIdx !== null ? (
+                    <span className="text-emerald-500 dark:text-emerald-400 transition-all duration-200">
+                      Inspection Horizon: {
+                        ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][hoveredMonthIdx]
+                      } 2026
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 dark:text-slate-500 opacity-70 transition-all duration-200">
+                      Hover columns for active monthly dossier
+                    </span>
+                  )}
+                </div>
+
                 {/* Legend Below Chart */}
                 <div className="flex flex-wrap items-center justify-center gap-4 mt-6 pt-4 border-t border-slate-200/40 dark:border-slate-900/40 text-[9px] sm:text-[10px] font-bold select-none">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-blue-500 shrink-0"></span>
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-500 shrink-0"></span>
                     <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Tapioca Flour Extra</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-purple-500 shrink-0"></span>
+                    <span className="w-2.5 h-2.5 rounded bg-blue-500 shrink-0"></span>
                     <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Sweet Potato Powder</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-amber-500 shrink-0"></span>
+                    <span className="w-2.5 h-2.5 rounded bg-purple-500 shrink-0"></span>
                     <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Pumpkin Flour Organic</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-teal-500 shrink-0"></span>
+                    <span className="w-2.5 h-2.5 rounded bg-amber-500 shrink-0"></span>
                     <span className="text-[#1A2B49] dark:text-slate-400 font-mono">Tapioca Pearls Premium</span>
                   </div>
                 </div>
