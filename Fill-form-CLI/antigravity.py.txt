@@ -1,0 +1,79 @@
+import sys
+import os
+import click
+import pandas as pd
+from docx import Document
+
+# Force UTF-8 encoding on Windows to prevent UnicodeEncodeError in terminal
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
+def extract_qa_from_docx(file_path):
+    doc = Document(file_path)
+    extracted_data = []
+    
+    for table_idx, table in enumerate(doc.tables):
+        for row_idx, row in enumerate(table.rows):
+            cells = [cell.text.strip() for cell in row.cells]
+            unique_cells = []
+            for c in cells:
+                if not unique_cells or c != unique_cells[-1]:
+                    unique_cells.append(c)
+            
+            if len(unique_cells) >= 2:
+                question = unique_cells[0]
+                answer = unique_cells[1]
+                
+                if question and answer and question != answer:
+                    if "Responses" in answer or "Response" in answer:
+                        continue
+                    extracted_data.append({
+                        "Question": question,
+                        "Your Answer": answer,
+                        "Source File": os.path.basename(file_path)
+                    })
+    return extracted_data
+
+@click.command()
+@click.option('--input-dir', default='./raw_forms', help='โฟลเดอร์ที่เก็บไฟล์ .docx เก่า')
+@click.option('--output-excel', default='Master_QA_Database.xlsx', help='ชื่อไฟล์ Excel ผลลัพธ์')
+def extract(input_dir, output_excel):
+    click.echo(click.style("=== เริ่มต้นระบบ Google Antigravity CLI ===", fg='cyan', bold=True))
+    
+    if not os.path.exists(input_dir):
+        click.echo(click.style(f"❌ ไม่พบโฟลเดอร์ {input_dir}", fg='red'))
+        return
+
+    all_extracted_records = []
+    files = [f for f in os.listdir(input_dir) if f.endswith('.docx')]
+    
+    if not files:
+        click.echo(click.style(f"⚠️ ไม่พบไฟล์ .docx ในโฟลเดอร์ {input_dir}", fg='yellow'))
+        return
+
+    click.echo(f"📦 พบไฟล์แบบสอบถามทั้งหมด {len(files)} ไฟล์ กำลังเริ่มแกะข้อมูล...")
+
+    for file_name in files:
+        file_path = os.path.join(input_dir, file_name)
+        click.echo(f"🔍 กำลังอ่านไฟล์: {file_name}")
+        try:
+            records = extract_qa_from_docx(file_path)
+            all_extracted_records.extend(records)
+        except Exception as e:
+            click.echo(click.style(f"❌ เกิดข้อผิดพลาดกับไฟล์ {file_name}: {str(e)}", fg='red'))
+
+    if all_extracted_records:
+        df = pd.DataFrame(all_extracted_records)
+        df = df[["Question", "Your Answer", "Source File"]]
+        df.to_excel(output_excel, index=False)
+        click.echo(click.style(f"\n🎉 สำเร็จ! แกะข้อมูลได้ทั้งหมด {len(df)} แถว", fg='green', bold=True))
+        click.echo(click.style(f"📊 ไฟล์ฐานข้อมูลถูกสร้างแล้วที่: {output_excel}", fg='green'))
+    else:
+        click.echo(click.style("\n❌ ไม่สามารถสกัดข้อมูลใดๆ ออกมาได้เลย", fg='red'))
+
+if __name__ == '__main__':
+    extract()

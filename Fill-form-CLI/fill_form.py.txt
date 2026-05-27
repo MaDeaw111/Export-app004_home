@@ -1,0 +1,69 @@
+import os
+import click
+import pandas as pd
+from docx import Document
+
+def fill_word_form(template_path, excel_path, output_path):
+    # 1. โหลดฐานข้อมูลคำตอบจาก Excel
+    df = pd.read_excel(excel_path)
+    
+    # แปลงข้อมูลใน Excel เป็น Dictionary เพื่อให้ค้นหาง่าย {คำถาม: คำตอบ}
+    qa_dict = dict(zip(df['Question'].astype(str), df['Your Answer'].astype(str)))
+    
+    # 2. เปิดไฟล์แบบสอบถามต้นแบบของ Scoular
+    doc = Document(template_path)
+    filled_count = 0
+    
+    click.echo("🔄 กำลังเทียบเคียงข้อมูลและกรอกฟอร์มใหม่อัตโนมัติ...")
+    
+    # 3. วิ่งไล่ดูทุกตารางในฟอร์มใหม่ เพื่อหาช่องที่ต้องกรอก
+    for table in doc.tables:
+        for row in table.rows:
+            for cell_idx, cell in enumerate(row.cells):
+                cell_text = cell.text.strip()
+                
+                # ถ้าเจอช่องที่มีคำว่า "Click or tap here to enter text." หรือ "Choose an item."
+                if "Click or tap here to enter text." in cell_text or "Choose an item." in cell_text:
+                    
+                    # ลองมองหา "คำถาม" ซึ่งมักจะอยู่เซลล์ก่อนหน้า (เซลล์ฝั่งซ้าย) ในแถวเดียวกัน
+                    if cell_idx > 0:
+                        potential_question = row.cells[cell_idx - 1].text.strip()
+                        
+                        # ค้นหาคำถามในคลังข้อมูลที่ดึงมาจาก Excel
+                        if potential_question in qa_dict:
+                            matched_answer = qa_dict[potential_question]
+                            
+                            # เคลียร์ข้อความเดิมในช่องกรอก แล้วใส่คำตอบของเราเข้าไปแทนที่
+                            cell.text = matched_answer
+                            filled_count += 1
+                            print(f"✅ กรอกข้อมูลสำเร็จ: [{potential_question}] -> {matched_answer}")
+                            
+    # 4. บันทึกไฟล์ที่กรอกเสร็จแล้วออกมาเป็นไฟล์ใหม่
+    doc.save(output_path)
+    return filled_count
+
+@click.command()
+@click.option('--template', default='./templates/3. F004.1 Ingredient Supplier Questionnaire - General.docx', help='พาธของไฟล์ฟอร์มว่าง Scoular')
+@click.option('--excel', default='Master_QA_Database.xlsx', help='พาธของไฟล์ Excel คลังคำตอบ')
+@click.option('--output', default='Scoular_Form_Filled.docx', help='ชื่อไฟล์ผลลัพธ์ที่กรอกเสร็จแล้ว')
+def main(template, excel, output):
+    """🚀 Google Antigravity CLI: รันระบบดึงข้อมูลจาก Excel ไปกรอกฟอร์มใหม่อัตโนมัติ"""
+    click.echo(click.style("=== เริ่มต้นระบบกรอกฟอร์มอัตโนมัติ (Form Filler Engine) ===", fg='cyan', bold=True))
+    
+    if not os.path.exists(template):
+        click.echo(click.style(f"❌ ไม่พบไฟล์เทมเพลตฟอร์มว่างที่: {template}\nกรุณาสร้างโฟลเดอร์ templates และใส่ไฟล์ให้ถูกต้อง", fg='red'))
+        return
+        
+    if not os.path.exists(excel):
+        click.echo(click.style(f"❌ ไม่พบไฟล์คลังข้อมูล {excel} ในโฟลเดอร์โปรเจกต์", fg='red'))
+        return
+        
+    try:
+        count = fill_word_form(template, excel, output)
+        click.echo(click.style(f"\n🎉 เสร็จเรียบร้อย! ระบบจับคู่และกรอกฟอร์มไปได้ทั้งหมด {count} จุด", fg='green', bold=True))
+        click.echo(click.style(f"📄 ไฟล์ที่กรอกสมบูรณ์ถูกสร้างแล้วที่: {output}", fg='green'))
+    except Exception as e:
+        click.echo(click.style(f"❌ เกิดข้อผิดพลาดระหว่างกรอกฟอร์ม: {str(e)}", fg='red'))
+
+if __name__ == '__main__':
+    main()
