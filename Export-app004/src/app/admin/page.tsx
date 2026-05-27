@@ -1573,7 +1573,8 @@ function AdminPortalContent() {
                   const type = impersonatedShipment.shipment_type || "container";
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const shipStatus = impersonatedShipment.status || (impersonatedShipment as any).shipment_status;
-                  const getDocActiveIndex = (s: typeof impersonatedShipment, status: string) => {
+                  const getDocActiveIndex = (s: Shipment | null, status: string) => {
+                    if (!s) return 0;
                     if (s.doc_status) {
                       if (s.doc_status === "get_booking") return 0;
                       if (s.doc_status === "preparing_docs") return 1;
