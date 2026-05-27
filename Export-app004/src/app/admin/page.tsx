@@ -10,6 +10,7 @@ import {
   updateShipment, 
   updateShipmentsBulk,
   createPurchaseOrder,
+  createShipments,
   logoutUser,
   Customer, 
   PurchaseOrder, 
@@ -763,6 +764,9 @@ function AdminPortalContent() {
     { di_no: "DI-XXXX-1", product_id: "PROD-AUSTENITE-22", quantity_tons: 10.0 }
   ]);
   const [creatingPO, setCreatingPO] = useState(false);
+  const [selectedPOForSplit, setSelectedPOForSplit] = useState<PurchaseOrder | null>(null);
+  const [newSplitRows, setNewSplitRows] = useState<Array<{ di_no: string; product_id: string; quantity_tons: number }>>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Notification Banner
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -967,6 +971,7 @@ function AdminPortalContent() {
           shipment_type: "container"
         });
         setSplitDIs([{ di_no: "DI-XXXX-1", product_id: "PROD-AUSTENITE-22", quantity_tons: 10.0 }]);
+        setShowCreateForm(false);
         setActiveTab("logs");
         loadAllData();
       } else {
@@ -2354,228 +2359,675 @@ function AdminPortalContent() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 2: CREATE & SPLIT PO FORM                            */}
+        {/* TAB 2: PO MANAGEMENT MASTER LEDGER & CREATION WORKSPACE  */}
         {/* ======================================================== */}
         {activeTab === "create" && (
-          <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-xl max-w-4xl mx-auto">
-            <h2 className="text-base font-bold text-white mb-6 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-blue-400" /> Log Purchase Order & Split DI Instruction Rows
-            </h2>
-
-            <form onSubmit={handleCreatePO} className="space-y-6">
-              {/* Form Row 1 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    PO No. (Unique identifier)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. WCAT-2601"
-                    value={newPO.po_no}
-                    onChange={(e) => handlePONumberChange(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Assign Customer Entity
-                  </label>
-                  <select
-                    required
-                    value={newPO.customer_id}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, customer_id: e.target.value }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    <option value="">-- Choose Customer --</option>
-                    {customers.map(c => (
-                      <option key={c.customer_id} value={c.customer_id}>
-                        {c.customer_name} ({c.customer_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Shipment Type
-                  </label>
-                  <select
-                    required
-                    value={newPO.shipment_type}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, shipment_type: e.target.value as "container" | "bulk" | "domestic" }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    <option value="container">Container</option>
-                    <option value="bulk">Bulk Vessel</option>
-                    <option value="domestic">Domestic</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Form Row 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    PO Sign Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newPO.po_date}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, po_date: e.target.value }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Total Amount (USD)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={newPO.total_amount_usd}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, total_amount_usd: Number(e.target.value) }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Payment Terms
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 30 Days Net"
-                    value={newPO.payment_term}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, payment_term: e.target.value }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Sales Agent ID
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. SALES-04"
-                    value={newPO.sales_person_id}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, sales_person_id: e.target.value }))}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Split DI Lines Table */}
-              <div className="border-t border-slate-900 pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Instruction Split-Plan (Delivery Instructions - DIs)
-                  </h3>
+          <div className="w-full animate-fade-in space-y-6">
+            {!showCreateForm ? (
+              <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-xl max-w-6xl mx-auto">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-900 pb-4 mb-6 gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-2 font-mono">
+                      📄 Purchase Order Master Ledger
+                    </h2>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
+                      Operational grid ledger displaying contracts & delivery progress allocations
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleAddSplitRow}
-                    className="py-1.5 px-3 bg-slate-900 hover:bg-slate-850 text-blue-400 rounded-xl text-xs font-semibold flex items-center gap-1 border border-slate-800 cursor-pointer"
+                    onClick={() => setShowCreateForm(true)}
+                    className="py-2.5 px-4 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.98] cursor-pointer shadow-lg shadow-blue-500/10 flex items-center gap-1.5 font-sans"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add DI Line
+                    <span>+ Log Purchase Order</span>
                   </button>
                 </div>
 
-                <div className="bg-slate-950/60 border border-slate-900 rounded-2xl overflow-hidden p-3 space-y-3">
-                  {splitDIs.map((row, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row items-center gap-3.5 p-3.5 rounded-xl bg-slate-900/40 border border-slate-950">
-                      
-                      <div className="flex-1 w-full">
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          DI No.
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="DI No."
-                          value={row.di_no}
-                          onChange={(e) => handleSplitRowChange(idx, "di_no", e.target.value)}
-                          className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
-                        />
-                      </div>
+                <div className="overflow-x-auto rounded-2xl border border-slate-900 bg-slate-950/10">
+                  <table className="w-full text-left border-collapse min-w-[950px]">
+                    <thead>
+                      <tr className="border-b border-slate-900 bg-slate-950/40 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        <th className="py-3 px-4">PO Number</th>
+                        <th className="py-3 px-3">Customer</th>
+                        <th className="py-3 px-3">Product</th>
+                        <th className="py-3 px-3">Sign Date</th>
+                        <th className="py-3 px-3 text-right">Total (MT)</th>
+                        <th className="py-3 px-3 text-right">Total Value</th>
+                        <th className="py-3 px-3 text-right">Remaining</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                        <th className="py-3 px-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900/60 text-xs font-sans text-slate-200">
+                      {(() => {
+                        const sortedPOs = [...purchaseOrders].sort((a, b) => b.po_date.localeCompare(a.po_date));
+                        if (sortedPOs.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={9} className="py-8 text-center text-slate-500 font-bold uppercase tracking-wider">
+                                No active Purchase Orders found. Click &quot;+ Log Purchase Order&quot; to add one.
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return sortedPOs.map((po) => {
+                          const customer = customers.find(c => c.customer_id === po.customer_id);
+                          const customerName = customer ? customer.customer_name : "Apex Logistics";
+                          const totalTonnage = po.total_qty || 0;
+                          const allocatedTonnage = shipments
+                            .filter(s => s.po_no === po.po_no)
+                            .reduce((sum, s) => sum + (Number(s.quantity_tons) || 0), 0);
+                          const remainingTonnage = Math.max(0, totalTonnage - allocatedTonnage);
+                          const progressPercent = totalTonnage > 0 ? ((totalTonnage - remainingTonnage) / totalTonnage) * 100 : 0;
 
-                      <div className="flex-1 w-full">
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          Product Specifications ID
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. PROD-FERRITIC-11"
-                          value={row.product_id}
-                          onChange={(e) => handleSplitRowChange(idx, "product_id", e.target.value)}
-                          className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
-                        />
-                      </div>
+                          let barColor = "bg-amber-500";
+                          if (progressPercent >= 100) {
+                            barColor = "bg-emerald-500";
+                          } else if (progressPercent >= 30) {
+                            barColor = "bg-blue-500";
+                          }
 
-                      <div className="w-full sm:w-32">
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          Tons Quantity
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          min="0.001"
-                          step="0.001"
-                          placeholder="Tonnage"
-                          value={row.quantity_tons}
-                          onChange={(e) => handleSplitRowChange(idx, "quantity_tons", e.target.value)}
-                          className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
-                        />
-                      </div>
+                          const getCurrencySymbol = (curr?: string) => {
+                            if (curr === "EUR") return "€";
+                            if (curr === "THB") return "฿";
+                            return "$";
+                          };
 
-                      {splitDIs.length > 1 && (
-                        <div className="self-end pb-0.5 sm:self-center">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSplitRow(idx)}
-                            className="p-2 text-red-400 bg-red-950/20 hover:bg-red-900/40 rounded-lg border border-red-500/10 cursor-pointer"
-                            title="Remove split line"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                          const handleOpenSplitWizard = () => {
+                            setSelectedPOForSplit(po);
+                            const existingDIs = shipments.filter(s => s.po_no === po.po_no);
+                            const nextIdx = existingDIs.length + 1;
+                            const cleanPO = po.po_no.replace("PO-", "");
+                            const diNo = `DI-${cleanPO}-${nextIdx}`;
+                            setNewSplitRows([
+                              {
+                                di_no: diNo,
+                                product_id: po.core_product || "PROD-AUSTENITE-22",
+                                quantity_tons: 10.0
+                              }
+                            ]);
+                          };
+
+                          return (
+                            <tr key={po.po_no} className="hover:bg-slate-900/10 transition-all">
+                              {/* PO Number */}
+                              <td className="py-3.5 px-4 font-bold font-mono">
+                                <button
+                                  type="button"
+                                  onClick={handleOpenSplitWizard}
+                                  className="text-blue-400 hover:text-blue-300 font-bold font-mono text-left focus:outline-none cursor-pointer"
+                                >
+                                  {po.po_no}
+                                </button>
+                              </td>
+
+                              {/* Customer */}
+                              <td className="py-3.5 px-3 font-semibold text-slate-300">
+                                {customerName}
+                              </td>
+
+                              {/* Product */}
+                              <td className="py-3.5 px-3 font-semibold text-slate-400">
+                                {po.core_product || "Tapioca Flour Extra"}
+                              </td>
+
+                              {/* Sign Date */}
+                              <td className="py-3.5 px-3 font-mono text-slate-400">
+                                {po.po_date}
+                              </td>
+
+                              {/* Total (MT) */}
+                              <td className="py-3.5 px-3 font-mono font-semibold text-right">
+                                {Number(totalTonnage).toFixed(3)} MT
+                              </td>
+
+                              {/* Total Value */}
+                              <td className="py-3.5 px-3 font-mono font-semibold text-right">
+                                {getCurrencySymbol(po.currency)}{Number(po.total_amount_usd).toLocaleString()}
+                              </td>
+
+                              {/* Remaining */}
+                              <td className="py-3.5 px-3 font-mono font-semibold text-right text-slate-400">
+                                {Number(remainingTonnage).toFixed(3)} MT
+                              </td>
+
+                              {/* Status Progress Bar */}
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-2 justify-center select-none">
+                                  <div className="h-2 w-24 bg-slate-850 rounded-full overflow-hidden border border-slate-900">
+                                    <div className={`h-full ${barColor}`} style={{ width: `${Math.min(100, progressPercent)}%` }}></div>
+                                  </div>
+                                  <span className="text-[10px] font-bold font-mono text-slate-400 w-10 text-right">
+                                    {progressPercent.toFixed(1)}%
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Action */}
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={handleOpenSplitWizard}
+                                  className="py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-slate-950 font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md shadow-blue-500/10 flex items-center justify-center gap-1 mx-auto font-sans"
+                                >
+                                  Split DIs
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : (
+              <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-900 shadow-xl max-w-4xl mx-auto">
+                <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-6">
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-blue-400" /> Log Purchase Order & Split DI Instruction Rows
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateForm(false)}
+                    className="py-1.5 px-3.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-800 cursor-pointer transition-all"
+                  >
+                    &larr; Back to PO Ledger
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreatePO} className="space-y-6">
+                  {/* Form Row 1 */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        PO No. (Unique identifier)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. WCAT-2601"
+                        value={newPO.po_no}
+                        onChange={(e) => handlePONumberChange(e.target.value)}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Assign Customer Entity
+                      </label>
+                      <select
+                        required
+                        value={newPO.customer_id}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, customer_id: e.target.value }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                      >
+                        <option value="">-- Choose Customer --</option>
+                        {customers.map(c => (
+                          <option key={c.customer_id} value={c.customer_id}>
+                            {c.customer_name} ({c.customer_id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Shipment Type
+                      </label>
+                      <select
+                        required
+                        value={newPO.shipment_type}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, shipment_type: e.target.value as "container" | "bulk" | "domestic" }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                      >
+                        <option value="container">Container</option>
+                        <option value="bulk">Bulk Vessel</option>
+                        <option value="domestic">Domestic</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Form Row 2 */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        PO Sign Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newPO.po_date}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, po_date: e.target.value }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Total Amount (USD)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={newPO.total_amount_usd}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, total_amount_usd: Number(e.target.value) }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Payment Terms
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 30 Days Net"
+                        value={newPO.payment_term}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, payment_term: e.target.value }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Sales Agent ID
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. SALES-04"
+                        value={newPO.sales_person_id}
+                        onChange={(e) => setNewPO(prev => ({ ...prev, sales_person_id: e.target.value }))}
+                        className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dynamic Split DI Lines Table */}
+                  <div className="border-t border-slate-900 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">
+                        Instruction Split-Plan (Delivery Instructions - DIs)
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={handleAddSplitRow}
+                        className="py-1.5 px-3 bg-slate-900 hover:bg-slate-850 text-blue-400 rounded-xl text-xs font-semibold flex items-center gap-1 border border-slate-800 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add DI Line
+                      </button>
+                    </div>
+
+                    <div className="bg-slate-950/60 border border-slate-900 rounded-2xl overflow-hidden p-3 space-y-3">
+                      {splitDIs.map((row, idx) => (
+                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-3.5 p-3.5 rounded-xl bg-slate-900/40 border border-slate-950">
+                          
+                          <div className="flex-1 w-full">
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                              DI No.
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="DI No."
+                              value={row.di_no}
+                              onChange={(e) => handleSplitRowChange(idx, "di_no", e.target.value)}
+                              className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="flex-1 w-full">
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                              Product Specifications ID
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. PROD-FERRITIC-11"
+                              value={row.product_id}
+                              onChange={(e) => handleSplitRowChange(idx, "product_id", e.target.value)}
+                              className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="w-full sm:w-32">
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                              Tons Quantity
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="0.001"
+                              step="0.001"
+                              placeholder="Tonnage"
+                              value={row.quantity_tons}
+                              onChange={(e) => handleSplitRowChange(idx, "quantity_tons", e.target.value)}
+                              className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          {splitDIs.length > 1 && (
+                            <div className="self-end pb-0.5 sm:self-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSplitRow(idx)}
+                                className="p-2 text-red-400 bg-red-950/20 hover:bg-red-900/40 rounded-lg border border-red-500/10 cursor-pointer"
+                                title="Remove split line"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Submit Buttons */}
+                  <div className="border-t border-slate-900 pt-6 flex justify-end gap-3.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateForm(false);
+                        setSplitDIs([{ di_no: "DI-XXXX-1", product_id: "PROD-AUSTENITE-22", quantity_tons: 10.0 }]);
+                      }}
+                      className="py-3 px-6 bg-slate-900 hover:bg-slate-850 text-white font-semibold rounded-xl text-xs border border-slate-800 transition-all cursor-pointer"
+                    >
+                      Cancel & Reset
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creatingPO}
+                      className="py-3 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/15"
+                    >
+                      {creatingPO ? "Executing SPLIT Transaction..." : "Issue PO & Split Shipments"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+            
+            {/* INTEGRATED POP-UP SPLIT DI WIZARD OVERLAY MODAL */}
+            {selectedPOForSplit && (
+              <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm transition-opacity">
+                <div onClick={() => setSelectedPOForSplit(null)} className="absolute inset-0"></div>
+                
+                <div className="relative w-full max-w-3xl glass-panel rounded-3xl border border-slate-800 shadow-2xl p-6 sm:p-8 z-10 animate-scale-in animate-fade-in max-h-[90vh] overflow-y-auto">
+                  
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                        <FolderSync className="w-5 h-5 text-blue-400 animate-spin [animation-duration:12s]" /> Split DI Wizard: {selectedPOForSplit.po_no}
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 font-sans">
+                        Manage and allocate delivery instruction splits for contract: {selectedPOForSplit.core_product || "Tapioca Flour"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedPOForSplit(null)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-900 border border-transparent hover:border-slate-800 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Upper Layer: Previous DI Splits History */}
+                  <div className="space-y-3.5 mb-6">
+                    <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-wider font-mono flex items-center gap-1 select-none">
+                      <span>●</span> Layer 1: Previous DI Splits History Log
+                    </h4>
+                    
+                    <div className="overflow-x-auto rounded-2xl border border-slate-900/60 bg-slate-950/20">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-900 bg-slate-950/40 text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                            <th className="py-2.5 px-4">DI Number</th>
+                            <th className="py-2.5 px-3">Product Specs ID</th>
+                            <th className="py-2.5 px-3 text-right">Quantity (Tons)</th>
+                            <th className="py-2.5 px-4 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/40 font-sans">
+                          {shipments.filter(s => s.po_no === selectedPOForSplit.po_no).length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="py-5 text-center text-slate-500 font-bold uppercase tracking-wider select-none">
+                                No DI lines allocated yet for this Purchase Order.
+                              </td>
+                            </tr>
+                          ) : (
+                            shipments
+                              .filter(s => s.po_no === selectedPOForSplit.po_no)
+                              .map((ship, index) => (
+                                <tr key={index} className="hover:bg-slate-900/5 transition-all text-slate-200">
+                                  <td className="py-2.5 px-4 font-bold font-mono">{ship.di_no}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-slate-400">{ship.product_id}</td>
+                                  <td className="py-2.5 px-3 text-right font-mono font-semibold">{Number(ship.quantity_tons || 0).toFixed(3)} MT</td>
+                                  <td className="py-2.5 px-4 text-center">
+                                    <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-850 text-blue-400 capitalize text-[9px] font-bold">
+                                      {ship.status.replace(/_/g, " ")}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Lower Layer: Interactive advanced input form fields */}
+                  <div className="space-y-4 border-t border-slate-900 pt-5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider font-mono flex items-center gap-1 select-none">
+                        <span>●</span> Layer 2: Allocate New DI Splits
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cleanPO = selectedPOForSplit.po_no.replace("PO-", "");
+                          const existingCount = shipments.filter(s => s.po_no === selectedPOForSplit.po_no).length;
+                          const nextIdx = existingCount + newSplitRows.length + 1;
+                          const diNo = `DI-${cleanPO}-${nextIdx}`;
+                          setNewSplitRows(prev => [...prev, {
+                            di_no: diNo,
+                            product_id: selectedPOForSplit.core_product || "PROD-AUSTENITE-22",
+                            quantity_tons: 10.0
+                          }]);
+                        }}
+                        className="py-1.5 px-3 bg-slate-900 hover:bg-slate-850 text-cyan-400 rounded-xl text-[10px] font-bold flex items-center gap-1 border border-slate-800 cursor-pointer transition-all font-sans"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Split Line
+                      </button>
+                    </div>
+
+                    {newSplitRows.length === 0 ? (
+                      <div className="p-6 text-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/10 text-slate-500 font-bold uppercase tracking-wider select-none text-xs font-sans">
+                        Click &quot;Add Split Line&quot; to configure a new DI shipment split.
+                      </div>
+                    ) : (
+                      <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-3.5 space-y-3">
+                        {newSplitRows.map((row, idx) => (
+                          <div key={idx} className="flex flex-col sm:flex-row items-center gap-3 p-3 rounded-xl bg-slate-900/30 border border-slate-900">
+                            
+                            <div className="flex-1 w-full">
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
+                                DI Number
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. DI-2601-A9"
+                                value={row.di_no}
+                                onChange={(e) => {
+                                  const updated = [...newSplitRows];
+                                  updated[idx].di_no = e.target.value;
+                                  setNewSplitRows(updated);
+                                }}
+                                className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                              />
+                            </div>
+
+                            <div className="flex-1 w-full font-mono">
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
+                                Product ID
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Product Spec ID"
+                                value={row.product_id}
+                                onChange={(e) => {
+                                  const updated = [...newSplitRows];
+                                  updated[idx].product_id = e.target.value;
+                                  setNewSplitRows(updated);
+                                }}
+                                className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <div className="w-full sm:w-32">
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
+                                Quantity (Tons)
+                              </label>
+                              <input
+                                type="number"
+                                required
+                                min="0.001"
+                                step="0.001"
+                                placeholder="Tons"
+                                value={row.quantity_tons || ""}
+                                onChange={(e) => {
+                                  const updated = [...newSplitRows];
+                                  updated[idx].quantity_tons = parseFloat(e.target.value) || 0;
+                                  setNewSplitRows(updated);
+                                }}
+                                className="w-full p-2 bg-slate-950 border border-slate-850 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500 font-mono text-right"
+                              />
+                            </div>
+
+                            <div className="self-end pb-0.5 sm:self-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewSplitRows(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-2 text-red-400 bg-red-950/20 hover:bg-red-900/40 rounded-lg border border-red-500/10 cursor-pointer"
+                                title="Remove split line"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Allocation Summary & Action Buttons */}
+                    <div className="border-t border-slate-900 pt-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      {/* Real-time Tonnage Calculations */}
+                      {(() => {
+                        const totalTonnage = selectedPOForSplit.total_qty || 0;
+                        const existingCount = shipments.filter(s => s.po_no === selectedPOForSplit.po_no);
+                        const allocatedTonnage = existingCount.reduce((sum, s) => sum + (Number(s.quantity_tons) || 0), 0);
+                        const remainingTonnage = Math.max(0, totalTonnage - allocatedTonnage);
+                        const stagedTonnage = newSplitRows.reduce((sum, r) => sum + r.quantity_tons, 0);
+                        const finalRemaining = Math.max(0, remainingTonnage - stagedTonnage);
+
+                        return (
+                          <div className="flex gap-4 text-[10px] font-mono font-bold uppercase tracking-wider select-none text-slate-400">
+                            <div>
+                              <span>Total:</span>
+                              <span className="text-white ml-1">{totalTonnage.toFixed(3)} MT</span>
+                            </div>
+                            <div>
+                              <span>Allocated:</span>
+                              <span className="text-blue-400 ml-1">{allocatedTonnage.toFixed(3)} MT</span>
+                            </div>
+                            <div>
+                              <span>Staged:</span>
+                              <span className="text-cyan-400 ml-1">{stagedTonnage.toFixed(3)} MT</span>
+                            </div>
+                            <div>
+                              <span>Remaining:</span>
+                              <span className={`${finalRemaining === 0 ? "text-emerald-400" : "text-amber-400"} ml-1`}>
+                                {finalRemaining.toFixed(3)} MT
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="flex gap-3 w-full sm:w-auto font-sans">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPOForSplit(null)}
+                          className="flex-1 sm:flex-initial py-2.5 px-5 bg-slate-900 hover:bg-slate-850 text-white font-semibold rounded-xl text-xs border border-slate-800 transition-all cursor-pointer text-center"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={newSplitRows.length === 0}
+                          onClick={async () => {
+                            // Commit DI splits logic!
+                            if (newSplitRows.some(r => !r.di_no || !r.product_id || r.quantity_tons <= 0)) {
+                              showNotification("Validation Error: All staged split lines must have a valid DI number, Product Specs ID, and Quantity > 0.", "error");
+                              return;
+                            }
+                            
+                            // Duplicate checks
+                            const diNos = newSplitRows.map(r => r.di_no);
+                            const hasDuplicates = diNos.some((no, i) => diNos.indexOf(no) !== i) || shipments.some(s => diNos.includes(s.di_no));
+                            if (hasDuplicates) {
+                              showNotification("Validation Error: Staged DI numbers must be unique and must not exist in previous records.", "error");
+                              return;
+                            }
+
+                            // Build Shipment objects to save!
+                            const newShipments: Shipment[] = newSplitRows.map(row => ({
+                              di_no: row.di_no,
+                              po_no: selectedPOForSplit.po_no,
+                              status: "pending_production",
+                              product_id: row.product_id,
+                              quantity_tons: row.quantity_tons,
+                              bl_approval_status: "pending",
+                              container_size: "40'",
+                              container_qty: 1,
+                              shipment_type: selectedPOForSplit.currency === "THB" ? "domestic" : "container", // default matching currency
+                              product_info: selectedPOForSplit.core_product || "Tapioca Flour Extra",
+                              destination_country: "United States"
+                            }));
+
+                            try {
+                              const success = await createShipments(newShipments);
+                              if (success) {
+                                showNotification(`Successfully allocated ${newShipments.length} new DI splits to contract ${selectedPOForSplit.po_no}.`, "success");
+                                setSelectedPOForSplit(null);
+                                loadAllData();
+                              } else {
+                                showNotification("Failed to save split lines. Please try again.", "error");
+                              }
+                            } catch {
+                              showNotification("Failed to save split lines due to an system error.", "error");
+                            }
+                          }}
+                          className="flex-1 sm:flex-initial py-2.5 px-5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg text-center"
+                        >
+                          Commit DI Splits
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Submit Buttons */}
-              <div className="border-t border-slate-900 pt-6 flex justify-end gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("logs");
-                    setSplitDIs([{ di_no: "DI-XXXX-1", product_id: "PROD-AUSTENITE-22", quantity_tons: 10.0 }]);
-                  }}
-                  className="py-3 px-6 bg-slate-900 hover:bg-slate-850 text-white font-semibold rounded-xl text-xs border border-slate-800 transition-all cursor-pointer"
-                >
-                  Cancel & Reset
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingPO}
-                  className="py-3 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/15"
-                >
-                  {creatingPO ? "Executing SPLIT Transaction..." : "Issue PO & Split Shipments"}
-                </button>
-              </div>
-            </form>
-          </section>
+            )}
+          </div>
         )}
 
         {/* ======================================================== */}
