@@ -27,10 +27,6 @@ import {
   Edit3, 
   FileText, 
   LogOut, 
-  Briefcase,
-  Users,
-  Compass,
-  ArrowRight,
   Trash2,
   Calendar,
   X,
@@ -64,14 +60,51 @@ export default function AdminPortal() {
   );
 }
 
+interface CostRow {
+  item: string;
+  supplier: string;
+  baseAmount: number;
+  vatAmount: number;
+  whtAmount: number;
+  netPaid: number;
+  transferDate: string;
+}
+
+const CONTAINER_DEFAULT_ROWS: CostRow[] = [
+  { item: "Shipping Agency Fee", supplier: "Nt2020", baseAmount: 150, vatAmount: 10.5, whtAmount: 4.5, netPaid: 156, transferDate: "2026-05-27" },
+  { item: "BL Document Fee", supplier: "APS", baseAmount: 50, vatAmount: 3.5, whtAmount: 1.5, netPaid: 52, transferDate: "2026-05-27" },
+  { item: "Surveyor Fee", supplier: "COTECNA", baseAmount: 200, vatAmount: 14, whtAmount: 6, netPaid: 208, transferDate: "2026-05-27" },
+  { item: "Container Haulage", supplier: "มีโชค", baseAmount: 300, vatAmount: 21, whtAmount: 3, netPaid: 318, transferDate: "2026-05-27" },
+  { item: "Documentation & Certs", supplier: "RDI", baseAmount: 50, vatAmount: 3.5, whtAmount: 1.5, netPaid: 52, transferDate: "2026-05-27" },
+  { item: "Sales Broker Commission", supplier: "ไทยโอกา", baseAmount: 120, vatAmount: 8.4, whtAmount: 3.6, netPaid: 124.8, transferDate: "2026-05-27" }
+];
+
+const BULK_DEFAULT_ROWS: CostRow[] = [
+  { item: "Port Wharfage & Weighing", supplier: "มอ ลิงค์", baseAmount: 150, vatAmount: 10.5, whtAmount: 1.5, netPaid: 159, transferDate: "2026-05-27" },
+  { item: "Shipping Agency Fee", supplier: "NCT2020", baseAmount: 120, vatAmount: 8.4, whtAmount: 3.6, netPaid: 124.8, transferDate: "2026-05-27" },
+  { item: "Barge Freight & Towage", supplier: "ไทยขนคือการ", baseAmount: 500, vatAmount: 35, whtAmount: 5, netPaid: 530, transferDate: "2026-05-27" },
+  { item: "Stevedoring Labor Charge", supplier: "เทมารักษ์", baseAmount: 300, vatAmount: 21, whtAmount: 9, netPaid: 312, transferDate: "2026-05-27" },
+  { item: "Surveyor Inspection Fee", supplier: "SGS", baseAmount: 180, vatAmount: 12.6, whtAmount: 5.4, netPaid: 187.2, transferDate: "2026-05-27" },
+  { item: "Documentation & Certs", supplier: "RDI", baseAmount: 40, vatAmount: 2.8, whtAmount: 1.2, netPaid: 41.6, transferDate: "2026-05-27" },
+  { item: "Despatch Cashback Credit", supplier: "เทมารักษ์", baseAmount: 1000, vatAmount: 0, whtAmount: 10, netPaid: 990, transferDate: "2026-05-27" }
+];
+
+const DOMESTIC_DEFAULT_ROWS: CostRow[] = [
+  { item: "Cross-Border Trucking", supplier: "มีโชค", baseAmount: 800, vatAmount: 56, whtAmount: 8, netPaid: 848, transferDate: "2026-05-27" },
+  { item: "Transit Customs Fee", supplier: "RDI", baseAmount: 200, vatAmount: 14, whtAmount: 6, netPaid: 208, transferDate: "2026-05-27" },
+  { item: "Cross-Docking Handling", supplier: "มอ ลิงค์", baseAmount: 150, vatAmount: 10.5, whtAmount: 4.5, netPaid: 156, transferDate: "2026-05-27" }
+];
+
 function AdminPortalContent() {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("wcat_theme") as "dark" | "light" | null;
     if (savedTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(savedTheme);
       document.body.classList.toggle("light-theme", savedTheme === "light");
     }
@@ -147,7 +180,7 @@ function AdminPortalContent() {
   }, [shipments]);
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<"logs" | "create" | "calendar" | "freight" | "financial">("logs");
+  const [activeTab, setActiveTab] = useState<"logs" | "create" | "calendar" | "freight" | "financial">("create");
 
   // Freight Pricing Subsystem States
   interface MarketIndex {
@@ -174,26 +207,14 @@ function AdminPortalContent() {
     id: string;
     diNumber: string;
     shipmentType: "container" | "bulk" | "domestic";
+    invoiceNo: string;
+    customer: string;
+    product: string;
+    volumeMt: number;
+    sellingPrice: number;
     revenue: number;
     cogs: number;
-    customsFee: number;
-    agencyFee: number;
-    docFee: number;
-    
-    // Type-specific dynamic fees
-    haulageFee?: number;
-    thcFee?: number;
-    sealFee?: number;
-    containerDemurrage?: number;
-    
-    bargeFee?: number;
-    stevedoringFee?: number;
-    portWharfageFee?: number;
-    vesselDemurrage?: number;
-    
-    crossBorderTrucking?: number;
-    transitCustoms?: number;
-    crossDocking?: number;
+    costRows: CostRow[];
   }
 
   const [marketIndexes, setMarketIndexes] = useState<MarketIndex[]>([
@@ -320,75 +341,142 @@ function AdminPortalContent() {
       id: "f1",
       diNumber: "DI-2601-A6",
       shipmentType: "container",
-      revenue: 12000,
-      cogs: 8000,
-      customsFee: 200,
-      agencyFee: 150,
-      docFee: 50,
-      haulageFee: 300,
-      thcFee: 150,
-      sealFee: 50,
-      containerDemurrage: 0
+      invoiceNo: "INV-DI-2601-A6_2025",
+      customer: "Apex Global Logistics",
+      product: "Tapioca Flour Extra",
+      volumeMt: 35,
+      sellingPrice: 450,
+      revenue: 15750,
+      cogs: 11025,
+      costRows: [
+        { item: "Shipping Agency Fee", supplier: "Nt2020", baseAmount: 150, vatAmount: 10.5, whtAmount: 4.5, netPaid: 156, transferDate: "2026-05-27" },
+        { item: "BL Document Fee", supplier: "APS", baseAmount: 50, vatAmount: 3.5, whtAmount: 1.5, netPaid: 52, transferDate: "2026-05-27" },
+        { item: "Surveyor Fee", supplier: "COTECNA", baseAmount: 200, vatAmount: 14, whtAmount: 6, netPaid: 208, transferDate: "2026-05-27" },
+        { item: "Container Haulage", supplier: "มีโชค", baseAmount: 300, vatAmount: 21, whtAmount: 3, netPaid: 318, transferDate: "2026-05-27" },
+        { item: "Documentation & Certs", supplier: "RDI", baseAmount: 50, vatAmount: 3.5, whtAmount: 1.5, netPaid: 52, transferDate: "2026-05-27" },
+        { item: "Sales Broker Commission", supplier: "ไทยโอกา", baseAmount: 120, vatAmount: 8.4, whtAmount: 3.6, netPaid: 124.8, transferDate: "2026-05-27" }
+      ]
     },
     {
       id: "f2",
       diNumber: "DI-2601-A7",
       shipmentType: "container",
-      revenue: 18000,
-      cogs: 12000,
-      customsFee: 250,
-      agencyFee: 180,
-      docFee: 60,
-      haulageFee: 400,
-      thcFee: 180,
-      sealFee: 60,
-      containerDemurrage: 1200
+      invoiceNo: "INV-DI-2601-A7_2025",
+      customer: "Apex Global Logistics",
+      product: "Tapioca Pearls Premium",
+      volumeMt: 100,
+      sellingPrice: 750,
+      revenue: 75000,
+      cogs: 52500,
+      costRows: [
+        { item: "Shipping Agency Fee", supplier: "Nt2020", baseAmount: 180, vatAmount: 12.6, whtAmount: 5.4, netPaid: 187.2, transferDate: "2026-05-27" },
+        { item: "BL Document Fee", supplier: "APS", baseAmount: 60, vatAmount: 4.2, whtAmount: 1.8, netPaid: 62.4, transferDate: "2026-05-27" },
+        { item: "Surveyor Fee", supplier: "COTECNA", baseAmount: 250, vatAmount: 17.5, whtAmount: 7.5, netPaid: 260, transferDate: "2026-05-27" },
+        { item: "Container Haulage", supplier: "มีโชค", baseAmount: 400, vatAmount: 28, whtAmount: 4, netPaid: 424, transferDate: "2026-05-27" },
+        { item: "Documentation & Certs", supplier: "RDI", baseAmount: 60, vatAmount: 4.2, whtAmount: 1.8, netPaid: 62.4, transferDate: "2026-05-27" },
+        { item: "Sales Broker Commission", supplier: "ไทยโอกา", baseAmount: 150, vatAmount: 10.5, whtAmount: 4.5, netPaid: 156, transferDate: "2026-05-27" }
+      ]
     },
     {
       id: "f3",
       diNumber: "DI-2603-C6",
       shipmentType: "bulk",
-      revenue: 9500,
-      cogs: 6000,
-      customsFee: 150,
-      agencyFee: 120,
-      docFee: 40,
-      bargeFee: 300,
-      stevedoringFee: 200,
-      portWharfageFee: 100,
-      vesselDemurrage: 0
+      invoiceNo: "INV-DI-2603-C6_2025",
+      customer: "Vortex Industrial Co",
+      product: "Tapioca Flour Extra",
+      volumeMt: 120,
+      sellingPrice: 650,
+      revenue: 78000,
+      cogs: 54600,
+      costRows: [
+        { item: "Port Wharfage & Weighing", supplier: "มอ ลิงค์", baseAmount: 150, vatAmount: 10.5, whtAmount: 1.5, netPaid: 159, transferDate: "2026-05-27" },
+        { item: "Shipping Agency Fee", supplier: "NCT2020", baseAmount: 120, vatAmount: 8.4, whtAmount: 3.6, netPaid: 124.8, transferDate: "2026-05-27" },
+        { item: "Barge Freight & Towage", supplier: "ไทยขนคือการ", baseAmount: 500, vatAmount: 35, whtAmount: 5, netPaid: 530, transferDate: "2026-05-27" },
+        { item: "Stevedoring Labor Charge", supplier: "เทมารักษ์", baseAmount: 300, vatAmount: 21, whtAmount: 9, netPaid: 312, transferDate: "2026-05-27" },
+        { item: "Surveyor Inspection Fee", supplier: "SGS", baseAmount: 180, vatAmount: 12.6, whtAmount: 5.4, netPaid: 187.2, transferDate: "2026-05-27" },
+        { item: "Documentation & Certs", supplier: "RDI", baseAmount: 40, vatAmount: 2.8, whtAmount: 1.2, netPaid: 41.6, transferDate: "2026-05-27" },
+        { item: "Despatch Cashback Credit", supplier: "เทมารักษ์", baseAmount: 1000, vatAmount: 0, whtAmount: 10, netPaid: 990, transferDate: "2026-05-27" }
+      ]
     }
   ]);
 
   const [financialForm, setFinancialForm] = useState({
     diNumber: "",
     shipmentType: "container" as "container" | "bulk" | "domestic",
-    revenue: "",
+    invoiceNo: "",
+    customer: "",
+    product: "",
+    volumeMt: "",
+    sellingPrice: "",
+    revenue: 0,
     cogs: "",
-    customsFee: "",
-    agencyFee: "",
-    docFee: "",
-    
-    // container fees
-    haulageFee: "",
-    thcFee: "",
-    sealFee: "",
-    containerDemurrage: "",
-    
-    // bulk fees
-    bargeFee: "",
-    stevedoringFee: "",
-    portWharfageFee: "",
-    vesselDemurrage: "",
-    
-    // truck fees
-    crossBorderTrucking: "",
-    transitCustoms: "",
-    crossDocking: ""
+    costRows: [] as Array<{
+      item: string;
+      supplier: string;
+      baseAmount: string;
+      vatAmount: string;
+      whtAmount: string;
+      netPaid: number;
+      transferDate: string;
+    }>
   });
 
   const [selectedTrendPort, setSelectedTrendPort] = useState("Qingdao");
   const [selectedTrendMode, setSelectedTrendMode] = useState<"20' CONT" | "40' HQ" | "Bulk Vessel">("20' CONT");
+
+  // Summation engine for active financial form costRows
+  const formTotalShipmentCost = useMemo(() => {
+    let expenseSum = 0;
+    financialForm.costRows.forEach(row => {
+      const net = parseFloat(row.netPaid?.toString()) || 0;
+      if (row.item === "Despatch Cashback Credit" || row.item.includes("Despatch")) {
+        expenseSum -= net;
+      } else {
+        expenseSum += net;
+      }
+    });
+    
+    const cogsVal = parseFloat(financialForm.cogs) || 0;
+    
+    // Auto-match Ocean Freight using bi-weekly rate tracking subsystem
+    let oceanFreight = 0;
+    const ship = shipments.find(s => s.di_no === financialForm.diNumber);
+    if (ship) {
+      const actualBookingMatch = actualBookings.find(b => b.diNumber === financialForm.diNumber);
+      if (actualBookingMatch) {
+        oceanFreight = actualBookingMatch.wcatRate;
+      } else if (ship.etd_date) {
+        const dateObj = new Date(ship.etd_date);
+        if (!isNaN(dateObj.getTime())) {
+          const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+          const targetMonth = `${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+          const ratePeriod = dateObj.getDate() <= 15 ? "1st Half" : "2nd Half";
+          const resolvedMode = (ship.container_size === "40' HQ" || ship.container_size === "40'") 
+            ? "40' HQ" 
+            : (ship.shipment_type === "bulk" ? "Bulk Vessel" : "20' CONT");
+          
+          let resolvedPort = "Qingdao";
+          if (ship.destination_country === "United States") resolvedPort = "Los Angeles";
+          else if (ship.destination_country === "Germany" || ship.destination_country === "Netherlands") resolvedPort = "Rotterdam";
+          else if (ship.destination_country === "Singapore") resolvedPort = "Singapore";
+          else if (ship.destination_country === "China") resolvedPort = "Shanghai";
+
+          const marketMatch = marketIndexes.find(
+            (mi) =>
+              mi.monthYear === targetMonth &&
+              mi.period === ratePeriod &&
+              mi.destinationPort.toLowerCase() === resolvedPort.toLowerCase() &&
+              mi.mode === resolvedMode
+          );
+          if (marketMatch) {
+            oceanFreight = marketMatch.marketRate;
+          }
+        }
+      }
+    }
+    
+    return cogsVal + expenseSum + oceanFreight;
+  }, [financialForm.costRows, financialForm.cogs, financialForm.diNumber, shipments, actualBookings, marketIndexes]);
 
   // Dynamic 12-month Trend Data Resolver (JAN - DEC)
   const trendData = useMemo(() => {
@@ -509,15 +597,19 @@ function AdminPortalContent() {
 
   // Helper to compute dynamic costs and auto-match bi-weekly Ocean Freight for financials
   const getShipmentCostDetails = useCallback((log: ShipmentFinancials) => {
-    let totalCosts = log.cogs + log.customsFee + log.agencyFee + log.docFee;
-
-    if (log.shipmentType === "container") {
-      totalCosts += (log.haulageFee || 0) + (log.thcFee || 0) + (log.sealFee || 0) + (log.containerDemurrage || 0);
-    } else if (log.shipmentType === "bulk") {
-      totalCosts += (log.bargeFee || 0) + (log.stevedoringFee || 0) + (log.portWharfageFee || 0) + (log.vesselDemurrage || 0);
-    } else if (log.shipmentType === "domestic") {
-      totalCosts += (log.crossBorderTrucking || 0) + (log.transitCustoms || 0) + (log.crossDocking || 0);
+    let expenseSum = 0;
+    if (log.costRows && Array.isArray(log.costRows)) {
+      log.costRows.forEach(row => {
+        if (row.item === "Despatch Cashback Credit" || row.item.includes("Despatch")) {
+          // Despatch is treated as cost reduction
+          expenseSum -= row.netPaid;
+        } else {
+          expenseSum += row.netPaid;
+        }
+      });
     }
+
+    let totalCosts = (log.cogs || 0) + expenseSum;
 
     // Auto-match Ocean Freight using bi-weekly rate tracking subsystem
     const ship = shipments.find(s => s.di_no === log.diNumber);
@@ -563,12 +655,8 @@ function AdminPortalContent() {
   // Dynamic Monthly Net Profit Tracker (JAN - DEC)
   const monthlyNetProfitData = useMemo(() => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     
     return months.map((month, idx) => {
-      const fullMonthName = fullMonths[idx];
-      const targetMonthYear = `${fullMonthName} 2026`;
-      
       const matchingLogs = financialLogs.filter((f) => {
         const ship = shipments.find(s => s.di_no === f.diNumber);
         if (ship && ship.etd_date) {
@@ -697,6 +785,7 @@ function AdminPortalContent() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(user);
       loadAllData();
     }
@@ -736,7 +825,7 @@ function AdminPortalContent() {
     setUpdatingBulk(true);
 
     const updates: Partial<Shipment> = {};
-    if (bulkStatus) updates.status = bulkStatus as any;
+    if (bulkStatus) updates.status = bulkStatus as Shipment["status"];
     if (bulkETD) updates.etd_date = bulkETD;
     if (bulkETA) updates.eta_date = bulkETA;
 
@@ -758,7 +847,7 @@ function AdminPortalContent() {
       } else {
         showNotification("Failed to apply bulk updates. Try again.", "error");
       }
-    } catch (err) {
+    } catch {
       showNotification("Error during bulk updates.", "error");
     } finally {
       setUpdatingBulk(false);
@@ -807,7 +896,7 @@ function AdminPortalContent() {
       showNotification(`Shipment ${editingDI.di_no} successfully updated.`, "success");
       setEditingDI(null);
       loadAllData();
-    } catch (err) {
+    } catch {
       showNotification("Failed to update shipment records.", "error");
     } finally {
       setSavingEdit(false);
@@ -825,7 +914,7 @@ function AdminPortalContent() {
     setSplitDIs(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSplitRowChange = (idx: number, field: string, value: any) => {
+  const handleSplitRowChange = (idx: number, field: string, value: string | number) => {
     setSplitDIs(prev => {
       const newRows = [...prev];
       newRows[idx] = { ...newRows[idx], [field]: value };
@@ -883,7 +972,7 @@ function AdminPortalContent() {
       } else {
         showNotification("Failed to save PO. Verify if the PO number is unique.", "error");
       }
-    } catch (err) {
+    } catch {
       showNotification("Error during PO creation.", "error");
     } finally {
       setCreatingPO(false);
@@ -1095,7 +1184,7 @@ function AdminPortalContent() {
               }
             }
             loadAllData();
-          } catch (err) {
+          } catch {
             showNotification("Failed to reschedule shipment loading.", "error");
           }
         }}
@@ -1292,8 +1381,8 @@ function AdminPortalContent() {
           type: "success"
         });
         setTimeout(() => setNotification(null), 4000);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        console.error("Error processing BL action");
       }
     };
 
@@ -1378,6 +1467,7 @@ function AdminPortalContent() {
                 </div>
                 {(() => {
                   const type = impersonatedShipment.shipment_type || "container";
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const shipStatus = impersonatedShipment.status || (impersonatedShipment as any).shipment_status;
                   const getPhysicalActiveIndex = (status: string) => {
                     if (status === "pending_production") return 0;
@@ -1470,6 +1560,7 @@ function AdminPortalContent() {
                 </div>
                 {(() => {
                   const type = impersonatedShipment.shipment_type || "container";
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const shipStatus = impersonatedShipment.status || (impersonatedShipment as any).shipment_status;
                   const getDocActiveIndex = (s: typeof impersonatedShipment, status: string) => {
                     if (s.doc_status) {
@@ -1683,7 +1774,7 @@ function AdminPortalContent() {
                     ) : impersonatedShipment.bl_approval_status === "rejected" ? (
                       <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-amber-400" />
-                        <span>Amendment requested. Feedback logged: "{impersonatedShipment.bl_feedback}"</span>
+                        <span>Amendment requested. Feedback logged: &quot;{impersonatedShipment.bl_feedback}&quot;</span>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -1798,12 +1889,12 @@ function AdminPortalContent() {
           </div>
           {/* Card 1: Total 20' Containers */}
           <div className="glass-card rounded-2xl p-4 border border-blue-500/10">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Total 20' Cont.</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Total 20&apos; Cont.</span>
             <h3 className="text-xl font-bold text-blue-300 mt-1">{stats.total20}</h3>
           </div>
           {/* Card 2: Total 40' Containers */}
           <div className="glass-card rounded-2xl p-4 border border-blue-500/10">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Total 40'/HQ Cont.</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Total 40&apos;/HQ Cont.</span>
             <h3 className="text-xl font-bold text-cyan-300 mt-1">{stats.total40}</h3>
           </div>
           {/* Card 3: Total Containers */}
@@ -1816,17 +1907,6 @@ function AdminPortalContent() {
         {/* Workspace Tab Bar */}
         <div className="flex gap-2.5 border-b border-slate-900 pb-3 mb-6">
           <button
-            onClick={() => setActiveTab("logs")}
-            className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === "logs" 
-                ? "bg-blue-600 text-slate-950 font-bold shadow-md shadow-blue-500/10" 
-                : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
-            }`}
-          >
-            <Briefcase className="w-4 h-4" /> Global Shipment Log
-          </button>
-
-          <button
             onClick={() => setActiveTab("create")}
             className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === "create" 
@@ -1834,7 +1914,18 @@ function AdminPortalContent() {
                 : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
             }`}
           >
-            <Plus className="w-4 h-4" /> Create & Split PO Form
+            📄 PO Management
+          </button>
+
+          <button
+            onClick={() => setActiveTab("logs")}
+            className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === "logs" 
+                ? "bg-blue-600 text-slate-950 font-bold shadow-md shadow-blue-500/10" 
+                : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
+            }`}
+          >
+            📦 Global Shipment Log
           </button>
 
           <button
@@ -1845,7 +1936,7 @@ function AdminPortalContent() {
                 : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
             }`}
           >
-            <Calendar className="w-4 h-4" /> Interactive Logistics Calendar
+            📅 Logistics Calendar
           </button>
 
           <button
@@ -1856,7 +1947,7 @@ function AdminPortalContent() {
                 : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
             }`}
           >
-            <span>📊 Freight Price</span>
+            📈 Freight Price
           </button>
 
           <button
@@ -1867,7 +1958,7 @@ function AdminPortalContent() {
                 : "text-slate-400 hover:text-white bg-slate-900/30 border border-slate-900 hover:border-slate-800"
             }`}
           >
-            <span>📊 Financial Command</span>
+            📊 Financial Command
           </button>
 
         </div>
@@ -2020,6 +2111,7 @@ function AdminPortalContent() {
                               {(() => {
                                 // 1. Determine shipment type
                                 const shipType = ship.shipment_type || "container";
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 const shipStatus = ship.status || (ship as any).shipment_status;
 
                                 // 2. Physical active index (0 to 4)
@@ -2313,7 +2405,7 @@ function AdminPortalContent() {
                   <select
                     required
                     value={newPO.shipment_type}
-                    onChange={(e) => setNewPO(prev => ({ ...prev, shipment_type: e.target.value as any }))}
+                    onChange={(e) => setNewPO(prev => ({ ...prev, shipment_type: e.target.value as "container" | "bulk" | "domestic" }))}
                     className="w-full p-3 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                   >
                     <option value="container">Container</option>
@@ -2647,7 +2739,7 @@ function AdminPortalContent() {
                       });
                       showNotification(`Shipment ${diNo} returned to unscheduled pool.`, "success");
                       loadAllData();
-                    } catch (err) {
+                    } catch {
                       showNotification("Failed to unschedule shipment.", "error");
                     }
                   }}
@@ -3671,10 +3763,10 @@ function AdminPortalContent() {
               {/* Card 1: Total Gross Revenue */}
               <div className="bg-slate-900/20 p-5 rounded-3xl border border-slate-900 relative overflow-hidden group hover:border-slate-800 transition-all flex flex-col justify-center">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-                  Total Gross Revenue ($)
+                  Total Gross Revenue (THB)
                 </span>
                 <div className="text-3xl font-extrabold text-white tracking-tight mt-2.5">
-                  ${financialLogs.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
+                  ฿{financialLogs.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
                 </div>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2.5 flex items-center gap-1">
                   <span>✦</span> Total value of all product invoices
@@ -3684,10 +3776,10 @@ function AdminPortalContent() {
               {/* Card 2: Total Shipment Expenses */}
               <div className="bg-slate-900/20 p-5 rounded-3xl border border-slate-900 relative overflow-hidden group hover:border-slate-800 transition-all flex flex-col justify-center">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-                  Total Shipment Expenses ($)
+                  Total Shipment Expenses (THB)
                 </span>
                 <div className="text-3xl font-extrabold text-slate-455 tracking-tight mt-2.5">
-                  ${financialLogs.reduce((acc, curr) => acc + getShipmentCostDetails(curr).totalCosts, 0).toLocaleString()}
+                  ฿{financialLogs.reduce((acc, curr) => acc + getShipmentCostDetails(curr).totalCosts, 0).toLocaleString()}
                 </div>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-2.5 flex items-center gap-1">
                   <span>✦</span> Logistics, penalties & matched freight
@@ -3709,12 +3801,12 @@ function AdminPortalContent() {
                       : "bg-red-950/10 border-red-900/40"
                   }`}>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-                      WCAT Net Profit & Margin ($)
+                      WCAT Net Profit & Margin (THB)
                     </span>
                     <div className={`text-3xl font-extrabold tracking-tight mt-2.5 ${
                       isProf ? "text-emerald-450" : "text-red-400"
                     }`}>
-                      {isProf ? "" : "-"}${Math.abs(netProf).toLocaleString()}
+                      {isProf ? "" : "-"}฿{Math.abs(netProf).toLocaleString()}
                       <span className="text-sm font-semibold ml-1.5 opacity-90">({margPerc}%)</span>
                     </div>
                     <p className={`text-[9px] font-bold uppercase tracking-wider mt-2.5 flex items-center gap-1 ${
@@ -3729,8 +3821,7 @@ function AdminPortalContent() {
 
             {/* DYNAMIC COST LOGGER & TREND CHART GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* COST LOGGER FORM (col-span-2) */}
-              <div className="lg:col-span-2 bg-slate-900/20 p-5 rounded-3xl border border-slate-900 space-y-4">
+              <div className="lg:col-span-2 bg-slate-900/20 p-6 rounded-3xl border border-slate-900 space-y-6">
                 <div className="flex items-center gap-3 pb-3 border-b border-slate-900/60">
                   <span className="text-blue-400 text-sm">📊</span>
                   <div>
@@ -3738,7 +3829,7 @@ function AdminPortalContent() {
                       Shipment Financial Logger & Cost Control
                     </h2>
                     <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5">
-                      Log dynamic logistics, handling & clearance expenses per active shipment
+                      Log dynamic WCAT clearing expenses row-by-row with real-time formulas
                     </p>
                   </div>
                 </div>
@@ -3751,352 +3842,492 @@ function AdminPortalContent() {
                       return;
                     }
 
+                    // Map row strings back to numbers
+                    const savedRows: CostRow[] = financialForm.costRows.map(row => ({
+                      item: row.item,
+                      supplier: row.supplier,
+                      baseAmount: parseFloat(row.baseAmount) || 0,
+                      vatAmount: parseFloat(row.vatAmount) || 0,
+                      whtAmount: parseFloat(row.whtAmount) || 0,
+                      netPaid: row.netPaid,
+                      transferDate: row.transferDate || "2026-05-27"
+                    }));
+
                     const newLog: ShipmentFinancials = {
                       id: Date.now().toString(),
                       diNumber: financialForm.diNumber,
                       shipmentType: financialForm.shipmentType,
-                      revenue: parseFloat(financialForm.revenue) || 0,
+                      invoiceNo: financialForm.invoiceNo,
+                      customer: financialForm.customer,
+                      product: financialForm.product,
+                      volumeMt: parseFloat(financialForm.volumeMt) || 0,
+                      sellingPrice: parseFloat(financialForm.sellingPrice) || 0,
+                      revenue: financialForm.revenue,
                       cogs: parseFloat(financialForm.cogs) || 0,
-                      customsFee: parseFloat(financialForm.customsFee) || 0,
-                      agencyFee: parseFloat(financialForm.agencyFee) || 0,
-                      docFee: parseFloat(financialForm.docFee) || 0,
-                      
-                      haulageFee: parseFloat(financialForm.haulageFee) || 0,
-                      thcFee: parseFloat(financialForm.thcFee) || 0,
-                      sealFee: parseFloat(financialForm.sealFee) || 0,
-                      containerDemurrage: parseFloat(financialForm.containerDemurrage) || 0,
-                      
-                      bargeFee: parseFloat(financialForm.bargeFee) || 0,
-                      stevedoringFee: parseFloat(financialForm.stevedoringFee) || 0,
-                      portWharfageFee: parseFloat(financialForm.portWharfageFee) || 0,
-                      vesselDemurrage: parseFloat(financialForm.vesselDemurrage) || 0,
-                      
-                      crossBorderTrucking: parseFloat(financialForm.crossBorderTrucking) || 0,
-                      transitCustoms: parseFloat(financialForm.transitCustoms) || 0,
-                      crossDocking: parseFloat(financialForm.crossDocking) || 0
+                      costRows: savedRows
                     };
 
                     setFinancialLogs([newLog, ...financialLogs]);
                     setFinancialForm({
                       diNumber: "",
                       shipmentType: "container",
-                      revenue: "",
+                      invoiceNo: "",
+                      customer: "",
+                      product: "",
+                      volumeMt: "",
+                      sellingPrice: "",
+                      revenue: 0,
                       cogs: "",
-                      customsFee: "",
-                      agencyFee: "",
-                      docFee: "",
-                      haulageFee: "",
-                      thcFee: "",
-                      sealFee: "",
-                      containerDemurrage: "",
-                      bargeFee: "",
-                      stevedoringFee: "",
-                      portWharfageFee: "",
-                      vesselDemurrage: "",
-                      crossBorderTrucking: "",
-                      transitCustoms: "",
-                      crossDocking: ""
+                      costRows: []
                     });
                   }}
-                  className="space-y-4 text-xs font-sans"
+                  className="space-y-6 text-xs font-sans"
                 >
-                  {/* General / Common Fields Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* DI Number select */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        DI Number
-                      </label>
-                      <select
-                        value={financialForm.diNumber}
-                        onChange={(e) => {
-                          const di = e.target.value;
-                          const ship = shipments.find(s => s.di_no === di);
-                          let resolvedType: "container" | "bulk" | "domestic" = "container";
-                          if (ship) {
-                            if (ship.shipment_type === "bulk") resolvedType = "bulk";
-                            else if (ship.shipment_type === "domestic") resolvedType = "domestic";
-                          }
-                          setFinancialForm({ ...financialForm, diNumber: di, shipmentType: resolvedType });
-                        }}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer font-mono"
-                      >
-                        <option value="">-- Select DI --</option>
-                        {shipments.map(s => (
-                          <option key={s.di_no} value={s.di_no}>{s.di_no} ({s.product_info || "Shipment"})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Shipment Type selector */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Shipment Type
-                      </label>
-                      <select
-                        value={financialForm.shipmentType}
-                        onChange={(e) => setFinancialForm({ ...financialForm, shipmentType: e.target.value as "container" | "bulk" | "domestic" })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
-                      >
-                        <option value="container">Ocean Container</option>
-                        <option value="bulk">Bulk Vessel Carrier</option>
-                        <option value="domestic">Cross-Border Trucking</option>
-                      </select>
-                    </div>
-
-                    {/* Product Revenue */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Product Revenue ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 15000"
-                        value={financialForm.revenue}
-                        onChange={(e) => setFinancialForm({ ...financialForm, revenue: e.target.value })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-
-                    {/* Product COGS */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Product COGS (FOB origin) ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 9000"
-                        value={financialForm.cogs}
-                        onChange={(e) => setFinancialForm({ ...financialForm, cogs: e.target.value })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-
-                    {/* Export Customs Fee */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Export Customs Fee ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 200"
-                        value={financialForm.customsFee}
-                        onChange={(e) => setFinancialForm({ ...financialForm, customsFee: e.target.value })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-
-                    {/* Shipping Agency Fee */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Shipping Agency Fee ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 150"
-                        value={financialForm.agencyFee}
-                        onChange={(e) => setFinancialForm({ ...financialForm, agencyFee: e.target.value })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-
-                    {/* Documentation & Certificates */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        Documentation & Certs ($)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 50"
-                        value={financialForm.docFee}
-                        onChange={(e) => setFinancialForm({ ...financialForm, docFee: e.target.value })}
-                        className="w-full p-2.5 bg-slate-950/40 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* DYNAMIC SHIFTING INPUT FIELDS PANEL */}
-                  <div className="p-4 bg-slate-950/30 rounded-2xl border border-slate-850 space-y-4">
-                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider font-mono">
-                      Type-Specific Transit & Penalty Costs
+                  {/* SECTION 1: CORE SHIPMENT INFO */}
+                  <div className="space-y-3">
+                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider font-mono bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/30">
+                      Section 1: Core Shipment Info
                     </span>
-                    
-                    {/* CONTAINER SHIPMENT FIELDS */}
-                    {financialForm.shipmentType === "container" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Container Haulage ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 300"
-                            value={financialForm.haulageFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, haulageFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            THC Terminal Charges ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 150"
-                            value={financialForm.thcFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, thcFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Seal & VGM Fee ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 50"
-                            value={financialForm.sealFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, sealFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div className="p-2.5 bg-amber-950/15 border border-amber-900/30 rounded-xl">
-                          <label className="block text-[10px] font-extrabold text-amber-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                            <span>⚠️</span> Demurrage Penalty ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 1200"
-                            value={financialForm.containerDemurrage}
-                            onChange={(e) => setFinancialForm({ ...financialForm, containerDemurrage: e.target.value })}
-                            className="w-full p-2 bg-slate-950/40 border border-amber-850 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-950/20 p-4 rounded-2xl border border-slate-900">
+                      {/* DI Number select */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          DI Number
+                        </label>
+                        <select
+                          value={financialForm.diNumber}
+                          onChange={(e) => {
+                            const di = e.target.value;
+                            if (!di) {
+                              setFinancialForm({
+                                diNumber: "",
+                                shipmentType: "container",
+                                invoiceNo: "",
+                                customer: "",
+                                product: "",
+                                volumeMt: "",
+                                sellingPrice: "",
+                                revenue: 0,
+                                cogs: "",
+                                costRows: []
+                              });
+                              return;
+                            }
 
-                    {/* BULK VESSEL SHIPMENT FIELDS */}
-                    {financialForm.shipmentType === "bulk" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Barge & Towage Fee ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 500"
-                            value={financialForm.bargeFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, bargeFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1.5">
-                            Stevedoring Charge ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 300"
-                            value={financialForm.stevedoringFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, stevedoringFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1.5">
-                            Port & Wharfage ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 100"
-                            value={financialForm.portWharfageFee}
-                            onChange={(e) => setFinancialForm({ ...financialForm, portWharfageFee: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div className="p-2.5 bg-amber-950/15 border border-amber-900/30 rounded-xl">
-                          <label className="block text-[10px] font-extrabold text-amber-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                            <span>⚠️</span> Vessel Demurrage ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 0"
-                            value={financialForm.vesselDemurrage}
-                            onChange={(e) => setFinancialForm({ ...financialForm, vesselDemurrage: e.target.value })}
-                            className="w-full p-2 bg-slate-950/40 border border-amber-850 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-                    )}
+                            const ship = shipments.find(s => s.di_no === di);
+                            let resolvedType: "container" | "bulk" | "domestic" = "container";
+                            let volume = "";
+                            let price = "";
+                            let revenue = 0;
+                            let customerName = "";
+                            let productName = "";
 
-                    {/* TRUCK / DOMESTIC ROAD FIELDS */}
-                    {financialForm.shipmentType === "domestic" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Cross-Border Trucking ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 800"
-                            value={financialForm.crossBorderTrucking}
-                            onChange={(e) => setFinancialForm({ ...financialForm, crossBorderTrucking: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Transit Customs Fee ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 200"
-                            value={financialForm.transitCustoms}
-                            onChange={(e) => setFinancialForm({ ...financialForm, transitCustoms: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">
-                            Cross-Docking Handling ($)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="e.g. 150"
-                            value={financialForm.crossDocking}
-                            onChange={(e) => setFinancialForm({ ...financialForm, crossDocking: e.target.value })}
-                            className="w-full p-2 bg-slate-900/40 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                          />
+                            if (ship) {
+                              if (ship.shipment_type === "bulk") resolvedType = "bulk";
+                              else if (ship.shipment_type === "domestic") resolvedType = "domestic";
+
+                              volume = ship.quantity_tons ? ship.quantity_tons.toString() : "";
+                              
+                              const matchingPO = purchaseOrders.find(po => po.po_no === ship.po_no);
+                              if (matchingPO) {
+                                price = matchingPO.price_mt ? matchingPO.price_mt.toString() : "";
+                                productName = matchingPO.core_product || ship.product_info || "";
+                                
+                                const matchingCust = customers.find(c => c.customer_id === matchingPO.customer_id);
+                                if (matchingCust) {
+                                  customerName = matchingCust.customer_name;
+                                }
+                              } else {
+                                productName = ship.product_info || "";
+                              }
+
+                              if (volume && price) {
+                                revenue = parseFloat(volume) * parseFloat(price);
+                              }
+                            }
+
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            let defaultRows: any[] = [];
+                            if (resolvedType === "container") {
+                              defaultRows = CONTAINER_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            } else if (resolvedType === "bulk") {
+                              defaultRows = BULK_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            } else {
+                              defaultRows = DOMESTIC_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            }
+
+                            setFinancialForm({
+                              diNumber: di,
+                              shipmentType: resolvedType,
+                              invoiceNo: `INV-${di}_2025`,
+                              customer: customerName,
+                              product: productName,
+                              volumeMt: volume,
+                              sellingPrice: price,
+                              revenue: revenue,
+                              cogs: ship && ship.contract_value ? Math.round(ship.contract_value * 0.7).toString() : "",
+                              costRows: defaultRows
+                            });
+                          }}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer font-mono"
+                        >
+                          <option value="">-- Select DI --</option>
+                          {shipments.map(s => (
+                            <option key={s.di_no} value={s.di_no}>{s.di_no} ({s.product_info || "Shipment"})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Shipment Type selector */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Shipment Type
+                        </label>
+                        <select
+                          value={financialForm.shipmentType}
+                          onChange={(e) => {
+                            const newType = e.target.value as "container" | "bulk" | "domestic";
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            let defaultRows: any[] = [];
+                            if (newType === "container") {
+                              defaultRows = CONTAINER_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            } else if (newType === "bulk") {
+                              defaultRows = BULK_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            } else {
+                              defaultRows = DOMESTIC_DEFAULT_ROWS.map(r => ({ ...r, baseAmount: r.baseAmount.toString(), vatAmount: r.vatAmount.toString(), whtAmount: r.whtAmount.toString() }));
+                            }
+                            setFinancialForm({
+                              ...financialForm,
+                              shipmentType: newType,
+                              costRows: defaultRows
+                            });
+                          }}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+                        >
+                          <option value="container">Ocean Container</option>
+                          <option value="bulk">Bulk Vessel Carrier</option>
+                          <option value="domestic">Cross-Border Trucking</option>
+                        </select>
+                      </div>
+
+                      {/* Invoice No */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Invoice No.
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="INV-XXXX_2025"
+                          value={financialForm.invoiceNo}
+                          onChange={(e) => setFinancialForm({ ...financialForm, invoiceNo: e.target.value })}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      {/* Customer */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">
+                          Customer
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={financialForm.customer || "Auto-completed"}
+                          className="w-full p-2 bg-slate-950/20 border border-slate-900 rounded-xl text-xs text-slate-400 font-bold"
+                        />
+                      </div>
+
+                      {/* Product */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">
+                          Product Spec
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={financialForm.product || "Auto-completed"}
+                          className="w-full p-2 bg-slate-950/20 border border-slate-900 rounded-xl text-xs text-slate-400 font-bold"
+                        />
+                      </div>
+
+                      {/* Selling Price */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Selling Price (THB/MT)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={financialForm.sellingPrice}
+                          onChange={(e) => {
+                            const priceVal = e.target.value;
+                            const volumeVal = parseFloat(financialForm.volumeMt) || 0;
+                            const newRev = volumeVal * (parseFloat(priceVal) || 0);
+                            setFinancialForm({
+                              ...financialForm,
+                              sellingPrice: priceVal,
+                              revenue: newRev
+                            });
+                          }}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                        />
+                      </div>
+
+                      {/* Volume MT */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Volume (MT)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0.000"
+                          step="0.001"
+                          value={financialForm.volumeMt}
+                          onChange={(e) => {
+                            const volumeVal = e.target.value;
+                            const priceVal = parseFloat(financialForm.sellingPrice) || 0;
+                            const newRev = (parseFloat(volumeVal) || 0) * priceVal;
+                            setFinancialForm({
+                              ...financialForm,
+                              volumeMt: volumeVal,
+                              revenue: newRev
+                            });
+                          }}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                        />
+                      </div>
+
+                      {/* Calculated Gross Revenue */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-550 uppercase tracking-wider mb-1.5">
+                          Gross Revenue (THB)
+                        </label>
+                        <div className="w-full p-2 bg-blue-950/10 border border-blue-900/30 rounded-xl text-xs text-blue-300 font-extrabold font-mono flex items-center h-8">
+                          ฿{financialForm.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       </div>
-                    )}
+
+                      {/* COGS */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Product COGS (FOB) (THB)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={financialForm.cogs}
+                          onChange={(e) => setFinancialForm({ ...financialForm, cogs: e.target.value })}
+                          className="w-full p-2 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Form Submission block */}
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      className="py-2.5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.98] cursor-pointer shadow-lg flex items-center gap-1 font-sans"
-                    >
-                      <span>+ Log Transaction Financials</span>
-                    </button>
+                  {/* SECTION 2 & 3: DYNAMIC ACCOUNTING SPREADSHEET GRID */}
+                  <div className="space-y-3">
+                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider font-mono bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/30">
+                      Section 2 & 3: Shipment Clearing Expense Checklist Grid
+                    </span>
+                    <div className="overflow-x-auto rounded-2xl border border-slate-900 bg-slate-950/10">
+                      <table className="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                          <tr className="border-b border-slate-900 bg-slate-950/40 text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                            <th className="py-2.5 px-3 w-1/4">Cost Item (รายการ)</th>
+                            <th className="py-2.5 px-2 w-1/6 text-right">Base Amount (ยอดเดิม)</th>
+                            <th className="py-2.5 px-2 w-1/8 text-right">VAT Amount</th>
+                            <th className="py-2.5 px-2 w-1/8 text-right">Withholding Tax (หัก ณ ที่จ่าย)</th>
+                            <th className="py-2.5 px-2 w-1/6 text-right">Net Paid THB (ยอดสุทธิ - บาท)</th>
+                            <th className="py-2.5 px-3 w-1/5">Transfer Date (วันที่โอน)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/60 text-xs font-sans">
+                          {financialForm.costRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-6 text-center text-slate-500 font-bold uppercase tracking-wider">
+                                Select a DI above to load dynamic clearing items
+                              </td>
+                            </tr>
+                          ) : (
+                            financialForm.costRows.map((row, idx) => {
+                              const isDespatch = row.item === "Despatch Cashback Credit" || row.item.includes("Despatch");
+                              return (
+                                <tr key={idx} className={`hover:bg-slate-900/10 transition-all ${isDespatch ? "bg-emerald-950/5" : ""}`}>
+                                  {/* Item & Supplier */}
+                                  <td className="py-2 px-3">
+                                    <div className="font-bold text-white leading-tight">{row.item}</div>
+                                    <div className="text-[10px] text-slate-500 uppercase font-semibold mt-0.5">{row.supplier}</div>
+                                  </td>
+
+                                  {/* Base Amount */}
+                                  <td className="py-2 px-2 text-right">
+                                    <input
+                                      type="number"
+                                      value={row.baseAmount}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const base = parseFloat(val) || 0;
+                                        const vat = parseFloat(row.vatAmount) || 0;
+                                        const wht = parseFloat(row.whtAmount) || 0;
+                                        
+                                        const updatedRows = [...financialForm.costRows];
+                                        updatedRows[idx] = {
+                                          ...row,
+                                          baseAmount: val,
+                                          netPaid: base + vat - wht
+                                        };
+                                        setFinancialForm({ ...financialForm, costRows: updatedRows });
+                                      }}
+                                      className="w-20 p-1.5 bg-slate-950/60 border border-slate-850 rounded text-right text-xs text-white focus:outline-none focus:border-cyan-500 font-mono inline-block"
+                                    />
+                                  </td>
+
+                                  {/* VAT Amount */}
+                                  <td className="py-2 px-2 text-right">
+                                    <input
+                                      type="number"
+                                      value={row.vatAmount}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const base = parseFloat(row.baseAmount) || 0;
+                                        const vat = parseFloat(val) || 0;
+                                        const wht = parseFloat(row.whtAmount) || 0;
+                                        
+                                        const updatedRows = [...financialForm.costRows];
+                                        updatedRows[idx] = {
+                                          ...row,
+                                          vatAmount: val,
+                                          netPaid: base + vat - wht
+                                        };
+                                        setFinancialForm({ ...financialForm, costRows: updatedRows });
+                                      }}
+                                      className="w-16 p-1.5 bg-slate-950/60 border border-slate-850 rounded text-right text-xs text-white focus:outline-none focus:border-cyan-500 font-mono inline-block"
+                                    />
+                                  </td>
+
+                                  {/* Withholding Tax */}
+                                  <td className="py-2 px-2 text-right">
+                                    <input
+                                      type="number"
+                                      value={row.whtAmount}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const base = parseFloat(row.baseAmount) || 0;
+                                        const vat = parseFloat(row.vatAmount) || 0;
+                                        const wht = parseFloat(val) || 0;
+                                        
+                                        const updatedRows = [...financialForm.costRows];
+                                        updatedRows[idx] = {
+                                          ...row,
+                                          whtAmount: val,
+                                          netPaid: base + vat - wht
+                                        };
+                                        setFinancialForm({ ...financialForm, costRows: updatedRows });
+                                      }}
+                                      className="w-16 p-1.5 bg-slate-950/60 border border-slate-850 rounded text-right text-xs text-white focus:outline-none focus:border-cyan-500 font-mono inline-block"
+                                    />
+                                  </td>
+
+                                  {/* Calculated Net Paid */}
+                                  <td className="py-2 px-2 text-right">
+                                    <span className={`px-2 py-1 rounded text-xs font-extrabold font-mono inline-block ${
+                                      isDespatch
+                                        ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/30"
+                                        : "bg-slate-900 border border-slate-850 text-white"
+                                    }`}>
+                                      {isDespatch ? "-" : ""}฿{row.netPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </td>
+
+                                  {/* Transfer Date */}
+                                  <td className="py-2 px-3">
+                                    <input
+                                      type="date"
+                                      value={row.transferDate}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const updatedRows = [...financialForm.costRows];
+                                        updatedRows[idx] = { ...row, transferDate: val };
+                                        setFinancialForm({ ...financialForm, costRows: updatedRows });
+                                      }}
+                                      className="w-full max-w-[130px] p-1.5 bg-slate-950/60 border border-slate-850 rounded text-xs text-white focus:outline-none focus:border-cyan-500 font-mono inline-block cursor-pointer"
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
+
+                  {/* FORM SUMMARY PANEL AND SUBMIT BUTTON */}
+                  {financialForm.diNumber && (
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch gap-4 pt-2">
+                      {/* Live Profitability / Net Margin Card */}
+                      {(() => {
+                        const revenue = financialForm.revenue;
+                        const totalCosts = formTotalShipmentCost;
+                        const profit = revenue - totalCosts;
+                        const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+                        const isProfitable = profit >= 0;
+                        const alertState = profit < 0 || margin < 5;
+
+                        return (
+                          <div className={`p-4 rounded-2xl border flex flex-col justify-center flex-grow ${
+                            alertState
+                              ? "bg-red-950/15 border-red-900/40 text-red-300"
+                              : "bg-emerald-950/15 border-emerald-900/40 text-emerald-300"
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider font-mono opacity-80">
+                                Live Estimate Profit Summary
+                              </span>
+                              {alertState ? (
+                                <span className="px-2 py-0.5 rounded bg-red-900/30 text-[9px] font-extrabold uppercase font-mono tracking-wider border border-red-800/45 animate-pulse">
+                                  ⚠️ LOW MARGIN
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded bg-emerald-900/30 text-[9px] font-extrabold uppercase font-mono tracking-wider border border-emerald-800/45">
+                                  🟢 OPTIMAL
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-850/50 text-left">
+                              <div>
+                                <span className="text-[8px] uppercase text-slate-500 font-mono block">Total Net Cost</span>
+                                <span className="text-xs font-bold text-white font-mono">
+                                  ฿{totalCosts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[8px] uppercase text-slate-500 font-mono block">Est. Net Profit</span>
+                                <span className={`text-xs font-extrabold font-mono ${isProfitable ? "text-emerald-450" : "text-red-400"}`}>
+                                  {isProfitable ? "" : "-"}฿{Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[8px] uppercase text-slate-500 font-mono block">Net Margin</span>
+                                <span className={`text-xs font-extrabold font-mono ${isProfitable ? "text-emerald-455" : "text-red-405"}`}>
+                                  {Math.round(margin)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Log Button Container */}
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="submit"
+                          className="w-full sm:w-auto py-3.5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-bold rounded-2xl text-xs transition-all active:scale-[0.98] cursor-pointer shadow-lg flex items-center justify-center gap-1.5 font-sans"
+                        >
+                          <span>+ Log Transaction Financials</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </form>
               </div>
 
@@ -4144,7 +4375,7 @@ function AdminPortalContent() {
                           fontSize="9"
                           fontFamily="monospace"
                         >
-                          ${tick.val.toLocaleString()}
+                          ฿{tick.val.toLocaleString()}
                         </text>
                       </g>
                     ))}
@@ -4219,10 +4450,10 @@ function AdminPortalContent() {
                     <tr className="border-b border-slate-900 bg-slate-950/20 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none font-mono">
                       <th className="py-4 px-5">DI NUMBER</th>
                       <th className="py-4 px-3">SHIPMENT TYPE</th>
-                      <th className="py-4 px-3">GROSS REVENUE</th>
-                      <th className="py-4 px-3">OCEAN FREIGHT COST (AUTO)</th>
-                      <th className="py-4 px-3">TOTAL EXPENSE COST</th>
-                      <th className="py-4 px-3">NET PROFIT ($)</th>
+                      <th className="py-4 px-3">GROSS REVENUE (THB)</th>
+                      <th className="py-4 px-3">OCEAN FREIGHT COST (THB) (AUTO)</th>
+                      <th className="py-4 px-3">TOTAL EXPENSE COST (THB)</th>
+                      <th className="py-4 px-3">NET PROFIT (THB)</th>
                       <th className="py-4 px-3 text-center font-mono">FINANCIAL STATUS FLAG</th>
                       <th className="py-4 px-3 text-center">ACTION</th>
                     </tr>
@@ -4265,22 +4496,22 @@ function AdminPortalContent() {
 
                             {/* GROSS REVENUE */}
                             <td className="py-3.5 px-3 font-semibold font-sans">
-                              ${log.revenue.toLocaleString()}
+                              ฿{log.revenue.toLocaleString()}
                             </td>
 
                             {/* OCEAN FREIGHT */}
                             <td className="py-3.5 px-3 font-semibold font-sans text-slate-400">
-                              {oceanFreight > 0 ? `$${oceanFreight.toLocaleString()}` : "$0"}
+                              {oceanFreight > 0 ? `฿${oceanFreight.toLocaleString()}` : "฿0"}
                             </td>
 
                             {/* TOTAL COST */}
                             <td className={`py-3.5 px-3 font-semibold font-sans ${spikeAlert ? "text-red-400" : "text-slate-200"}`}>
-                              ${totalCosts.toLocaleString()}
+                              ฿{totalCosts.toLocaleString()}
                             </td>
 
                             {/* NET PROFIT */}
                             <td className={`py-3.5 px-3 font-extrabold text-sm ${profit >= 0 ? "text-emerald-450" : "text-red-400"}`}>
-                              {profit >= 0 ? "" : "-"}${Math.abs(profit).toLocaleString()}
+                              {profit >= 0 ? "" : "-"}฿{Math.abs(profit).toLocaleString()}
                             </td>
 
                             {/* STATUS FLAG BADGE */}
@@ -4504,7 +4735,7 @@ function AdminPortalContent() {
                         </label>
                         <select
                           value={editingDI.shipment_type || "container"}
-                          onChange={(e) => setEditingDI({ ...editingDI, shipment_type: e.target.value as any })}
+                          onChange={(e) => setEditingDI({ ...editingDI, shipment_type: e.target.value as "container" | "bulk" | "domestic" })}
                           className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer font-bold"
                         >
                           <option value="container">📦 Container Loading</option>
@@ -4528,9 +4759,9 @@ function AdminPortalContent() {
                                 className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                               >
                                 <option value="">-- Choose Size --</option>
-                                <option value="20'">20'</option>
-                                <option value="40'">40'</option>
-                                <option value="40' HQ">40' HQ</option>
+                                <option value="20'">20&apos;</option>
+                                <option value="40'">40&apos;</option>
+                                <option value="40' HQ">40&apos; HQ</option>
                               </select>
                             </div>
 
@@ -4883,7 +5114,7 @@ function AdminPortalContent() {
                   <div className="space-y-4 animate-fade-in">
                     <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-900 space-y-4">
                       <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                        Clearance Timeline & shipping dossiers
+                        Clearance Timeline & Shipping Dossiers
                       </h4>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -4894,7 +5125,7 @@ function AdminPortalContent() {
                           </label>
                           <select
                             value={editingDI.status}
-                            onChange={(e) => setEditingDI({ ...editingDI, status: e.target.value as any })}
+                            onChange={(e) => setEditingDI({ ...editingDI, status: e.target.value as Shipment["status"] })}
                             className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                           >
                             {PIPELINE_STAGES.map(s => (
@@ -4925,7 +5156,7 @@ function AdminPortalContent() {
                         </label>
                         <select
                           value={editingDI.doc_status || "preparing_docs"}
-                          onChange={(e) => setEditingDI({ ...editingDI, doc_status: e.target.value as any })}
+                          onChange={(e) => setEditingDI({ ...editingDI, doc_status: e.target.value as Shipment["doc_status"] })}
                           className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                         >
                           {editingDI.shipment_type === "bulk" ? (
@@ -5022,7 +5253,7 @@ function AdminPortalContent() {
                           <span className="font-bold block capitalize mb-1">
                             Customer Feedback: {editingDI.bl_approval_status}
                           </span>
-                          "{editingDI.bl_feedback || "No comment logged by client."}"
+                          &quot;{editingDI.bl_feedback || "No comment logged by client."}&quot;
                         </div>
                       )}
                     </div>

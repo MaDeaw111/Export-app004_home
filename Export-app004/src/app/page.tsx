@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent, customEmail?: string, forceRole?: "admin" | "customer" | "manager") => {
+  const handleLogin = async (e: React.FormEvent | null, customEmail?: string, forceRole?: "admin" | "customer" | "manager") => {
     if (e) e.preventDefault();
     setLoading(true);
     setError("");
@@ -35,7 +35,7 @@ export default function LoginPage() {
         role = "manager";
       }
 
-      const profile = await loginUser(targetEmail, role as any);
+      const profile = await loginUser(targetEmail, role);
       
       // Redirect based on role
       if (profile.role === "admin") {
@@ -45,8 +45,8 @@ export default function LoginPage() {
       } else {
         router.push("/client");
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to log in. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to log in. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   const triggerQuickLogin = (demoEmail: string, role: "admin" | "customer" | "manager") => {
     setEmail(demoEmail);
-    handleLogin(null as any, demoEmail, role);
+    handleLogin(null, demoEmail, role);
   };
 
   return (

@@ -25,8 +25,6 @@ import {
   CheckSquare, 
   LogOut, 
   User, 
-  ExternalLink,
-  Info,
   Ship,
   Anchor,
   MapPin,
@@ -71,6 +69,7 @@ function ClientPortalContent() {
   useEffect(() => {
     const savedTheme = localStorage.getItem("wcat_theme") as "dark" | "light" | null;
     if (savedTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(savedTheme);
       document.body.classList.toggle("light-theme", savedTheme === "light");
     }
@@ -105,6 +104,7 @@ function ClientPortalContent() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(user);
       loadData(user.email);
     }
@@ -155,7 +155,7 @@ function ClientPortalContent() {
 
       // Reload fresh state
       if (profile) loadData(profile.email);
-    } catch (err) {
+    } catch {
       showNotification("Failed to update B/L draft. Please try again.", "error");
     } finally {
       setSubmittingBL(prev => ({ ...prev, [diNo]: false }));
@@ -376,6 +376,7 @@ function ClientPortalContent() {
                                   </div>
                                   {(() => {
                                     const type = ship.shipment_type || "container";
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const shipStatus = ship.status || (ship as any).shipment_status;
                                     const getPhysicalActiveIndex = (status: string) => {
                                       if (status === "pending_production") return 0;
@@ -468,6 +469,7 @@ function ClientPortalContent() {
                                   </div>
                                   {(() => {
                                     const type = ship.shipment_type || "container";
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const shipStatus = ship.status || (ship as any).shipment_status;
                                     const getDocActiveIndex = (s: typeof ship, status: string) => {
                                       if (s.doc_status) {
@@ -732,13 +734,12 @@ function ClientPortalContent() {
                                       ) : ship.bl_approval_status === "rejected" ? (
                                         <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 text-xs flex items-center gap-2">
                                           <AlertCircle className="w-4 h-4 text-amber-400" />
-                                          <span>Amendment requested. Feedbacks logged: "{ship.bl_feedback}"</span>
+                                           <span>Amendment requested. Feedbacks logged: &quot;{ship.bl_feedback}&quot;</span>
                                         </div>
                                       ) : (
                                         <div className="space-y-3">
                                           <textarea
                                             placeholder="Provide revision notes or feedback if requesting changes..."
-                                            value={blFeedback[ship.di_no] || ""}
                                             onChange={(e) => setBlFeedback(prev => ({ ...prev, [ship.di_no]: e.target.value }))}
                                             className="w-full p-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-blue-500 transition-all"
                                             rows={2}

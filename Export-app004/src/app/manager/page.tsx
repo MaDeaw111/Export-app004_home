@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   getCurrentUser, 
@@ -9,7 +9,9 @@ import {
   Shipment, 
   UserProfile,
   getPurchaseOrders,
-  getCustomers
+  getCustomers,
+  PurchaseOrder,
+  Customer
 } from "@/utils/supabaseClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { 
@@ -26,7 +28,6 @@ import {
   Filter,
   Activity,
   Layers,
-  ArrowRight,
   TrendingDown,
   ChevronDown,
   ChevronUp
@@ -44,8 +45,8 @@ function ManagerPortalContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductFilter, setSelectedProductFilter] = useState("all");
@@ -59,30 +60,12 @@ function ManagerPortalContent() {
   const [hoveredMonthIdx, setHoveredMonthIdx] = useState<number | null>(null);
 
   // Retrieve customer name for a shipment (Declared at the top to resolve runtime ReferenceError)
-  const getCustomerName = (poNo: string) => {
+  const getCustomerName = useCallback((poNo: string) => {
     const po = purchaseOrders.find(p => p.po_no === poNo);
     if (!po) return "Apex Logistics";
     const cust = customers.find(c => c.customer_id === po.customer_id);
     return cust ? cust.customer_name : "Apex Logistics";
-  };
-
-  useEffect(() => {
-    // Theme setup
-    const savedTheme = localStorage.getItem("wcat_theme") as "dark" | "light" | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.body.classList.toggle("light-theme", savedTheme === "light");
-    }
-
-    // User check
-    const user = getCurrentUser();
-    if (user && user.role === "manager") {
-      setProfile(user);
-      loadAllData();
-    } else {
-      router.push("/");
-    }
-  }, [router]);
+  }, [purchaseOrders, customers]);
 
   const loadAllData = async () => {
     try {
@@ -97,10 +80,29 @@ function ManagerPortalContent() {
       const poNos = fetchedPOs.map(po => po.po_no);
       const fetchedShipments = await getShipments(poNos);
       setShipments(fetchedShipments);
-    } catch (err) {
-      console.error("Failed to load operations metrics:", err);
+    } catch {
+      console.error("Failed to load operations metrics");
     }
   };
+
+  useEffect(() => {
+    // Theme setup
+    const savedTheme = localStorage.getItem("wcat_theme") as "dark" | "light" | null;
+    if (savedTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTheme(savedTheme);
+      document.body.classList.toggle("light-theme", savedTheme === "light");
+    }
+
+    // User check
+    const user = getCurrentUser();
+    if (user && user.role === "manager") {
+      setProfile(user);
+      loadAllData();
+    } else {
+      router.push("/");
+    }
+  }, [router]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -171,7 +173,7 @@ function ManagerPortalContent() {
         return matchesSearch && matchesProduct && matchesCustomer && matchesCountry;
       })
       .sort((a, b) => (b.contract_value || 0) - (a.contract_value || 0));
-  }, [shipments, searchQuery, selectedProductFilter, selectedCustomerFilter, selectedCountryFilter]);
+  }, [shipments, searchQuery, selectedProductFilter, selectedCustomerFilter, selectedCountryFilter, getCustomerName]);
 
   // Executive watchlist display (sliced to top 5 rows unless expanded)
   const visibleShipments = useMemo(() => {
@@ -205,7 +207,7 @@ function ManagerPortalContent() {
       
       return true;
     });
-  }, [shipments, activeMonthSlicer, activeTypeSlicer, activeProductSlicer, purchaseOrders, customers]);
+  }, [shipments, activeMonthSlicer, activeTypeSlicer, activeProductSlicer]);
 
   // Chart 1: Monthly Export Volume (MT)
   const monthlyVolumes = useMemo(() => {
@@ -384,7 +386,7 @@ function ManagerPortalContent() {
       if (custName) set.add(custName);
     });
     return Array.from(set);
-  }, [shipments, purchaseOrders, customers]);
+  }, [shipments, getCustomerName]);
 
   // Unique Destination Countries List for filter dropdown
   const uniqueCountries = useMemo(() => {

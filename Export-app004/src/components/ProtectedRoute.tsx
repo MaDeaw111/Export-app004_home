@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +30,7 @@ export default function ProtectedRoute({ children, allowedRole }: ProtectedRoute
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUser(currentUser);
     setLoading(false);
   }, [router, allowedRole]);

@@ -35,6 +35,14 @@ export interface PurchaseOrder {
   total_amount_usd: number;
   payment_term: string;
   sales_person_id: string;
+  total_qty?: number;
+  core_product?: string;
+  price_mt?: number;
+  cont_size?: string;
+  cont_qty?: number;
+  packing_type?: string;
+  bags_per_cont?: number;
+  currency?: string;
 }
 
 export interface Shipment {
@@ -121,10 +129,10 @@ const MOCK_CUSTOMERS: Customer[] = [
 ];
 
 const MOCK_POS: PurchaseOrder[] = [
-  { po_no: "PO-2601-A", customer_id: "CUST-01", po_date: "2026-05-10", total_amount_usd: 125000, payment_term: "30 Days Net", sales_person_id: "SALES-09" },
-  { po_no: "PO-2602-B", customer_id: "CUST-01", po_date: "2026-05-12", total_amount_usd: 45000, payment_term: "Letter of Credit", sales_person_id: "SALES-09" },
-  { po_no: "PO-2603-C", customer_id: "CUST-02", po_date: "2026-05-15", total_amount_usd: 380000, payment_term: "50% Advance / 50% CAD", sales_person_id: "SALES-04" },
-  { po_no: "PO-2604-D", customer_id: "CUST-03", po_date: "2026-05-20", total_amount_usd: 98000, payment_term: "60 Days Net", sales_person_id: "SALES-02" }
+  { po_no: "PO-2601-A", customer_id: "CUST-01", po_date: "2026-05-10", total_amount_usd: 125000, payment_term: "30 Days Net", sales_person_id: "SALES-09", total_qty: 600.0, core_product: "Tapioca Flour Extra", price_mt: 208.33, cont_size: "40' HQ", cont_qty: 30, packing_type: "950 kg Jumbo Bag", bags_per_cont: 21, currency: "USD" },
+  { po_no: "PO-2602-B", customer_id: "CUST-01", po_date: "2026-05-12", total_amount_usd: 45000, payment_term: "Letter of Credit", sales_person_id: "SALES-09", total_qty: 100.0, core_product: "Tapioca Flour Extra", price_mt: 450.00, cont_size: "20' Standard", cont_qty: 5, packing_type: "850 kg Jumbo Bag", bags_per_cont: 24, currency: "USD" },
+  { po_no: "PO-2603-C", customer_id: "CUST-02", po_date: "2026-05-15", total_amount_usd: 380000, payment_term: "50% Advance / 50% CAD", sales_person_id: "SALES-04", total_qty: 800.0, core_product: "Sweet Potato Powder", price_mt: 475.00, cont_size: "40' HQ", cont_qty: 40, packing_type: "Bulk Container + Liner", bags_per_cont: 1, currency: "EUR" },
+  { po_no: "PO-2604-D", customer_id: "CUST-03", po_date: "2026-05-20", total_amount_usd: 98000, payment_term: "60 Days Net", sales_person_id: "SALES-02", total_qty: 400.0, core_product: "Pumpkin Flour Organic", price_mt: 245.00, cont_size: "40' HQ", cont_qty: 20, packing_type: "Bulk Container", bags_per_cont: 1, currency: "THB" }
 ];
 
 const MOCK_SHIPMENTS: Shipment[] = [
@@ -174,7 +182,7 @@ const MOCK_SHIPMENTS: Shipment[] = [
 const initializeLocalStorage = () => {
   if (typeof window === "undefined") return;
 
-  const version = "v8"; // Bust cache and force reload mock shipments with commercial metrics
+  const version = "v11"; // Bust cache and force reload mock shipments with commercial metrics
   const currentVersion = localStorage.getItem("wcat_seed_version");
   if (currentVersion !== version) {
     localStorage.removeItem(LOCAL_STORAGE_KEYS.CUSTOMERS);
@@ -201,7 +209,7 @@ initializeLocalStorage();
 // LOGISTICS DATA ACCESS LAYER API
 // ==========================================
 
-export async function loginUser(email: string, roleInput: "admin" | "customer"): Promise<UserProfile> {
+export async function loginUser(email: string, roleInput: "admin" | "customer" | "manager"): Promise<UserProfile> {
   if (isLiveSupabase && supabase) {
     // Standard Supabase login can go here, but for smooth standalone running:
     // We emulate profile creation and return
@@ -211,11 +219,14 @@ export async function loginUser(email: string, roleInput: "admin" | "customer"):
   initializeLocalStorage();
   const lowerEmail = email.toLowerCase();
   
-  let role: "admin" | "customer" = roleInput;
+  let role: "admin" | "customer" | "manager" = roleInput;
   let company_name = "Apex Global Logistics";
 
   if (lowerEmail.includes("admin")) {
     role = "admin";
+    company_name = "WICHAI AGRI-TRADE CO.,LTD";
+  } else if (lowerEmail.includes("manager")) {
+    role = "manager";
     company_name = "WICHAI AGRI-TRADE CO.,LTD";
   } else if (lowerEmail.includes("client") || lowerEmail.includes("vortex")) {
     role = "customer";
@@ -395,5 +406,20 @@ export async function updateShipmentsBulk(
   });
 
   localStorage.setItem(LOCAL_STORAGE_KEYS.SHIPMENTS, JSON.stringify(shipments));
+  return true;
+}
+
+export async function createShipments(newShipments: Shipment[]): Promise<boolean> {
+  if (isLiveSupabase && supabase) {
+    const { error } = await supabase.from("shipments").insert(newShipments);
+    return !error;
+  }
+
+  initializeLocalStorage();
+  const rawShips = localStorage.getItem(LOCAL_STORAGE_KEYS.SHIPMENTS);
+  const ships: Shipment[] = rawShips ? JSON.parse(rawShips) : MOCK_SHIPMENTS;
+  ships.push(...newShipments);
+  localStorage.setItem(LOCAL_STORAGE_KEYS.SHIPMENTS, JSON.stringify(ships));
+
   return true;
 }
