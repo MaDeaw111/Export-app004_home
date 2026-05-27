@@ -11,6 +11,8 @@ import {
   updateShipmentsBulk,
   createPurchaseOrder,
   createShipments,
+  getFinancialLogs,
+  saveFinancialLog,
   logoutUser,
   Customer, 
   PurchaseOrder, 
@@ -777,10 +779,14 @@ function AdminPortalContent() {
       const custs = await getCustomers();
       const pos = await getPurchaseOrders();
       const ships = await getShipments();
+      const finLogs = await getFinancialLogs();
       
       setCustomers(custs);
       setPurchaseOrders(pos);
       setShipments(ships);
+      if (finLogs && finLogs.length > 0) {
+        setFinancialLogs(finLogs);
+      }
     } catch (err) {
       console.error("Failed to query administration logs:", err);
     }
@@ -4287,7 +4293,7 @@ function AdminPortalContent() {
                 </div>
 
                 <form 
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     if (!financialForm.diNumber) {
                       alert("Please select a DI number.");
@@ -4319,6 +4325,7 @@ function AdminPortalContent() {
                       costRows: savedRows
                     };
 
+                    await saveFinancialLog(newLog);
                     setFinancialLogs([newLog, ...financialLogs]);
                     setFinancialForm({
                       diNumber: "",

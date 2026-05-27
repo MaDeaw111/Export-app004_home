@@ -45,6 +45,30 @@ export interface PurchaseOrder {
   currency?: string;
 }
 
+export interface CostRow {
+  item: string;
+  supplier: string;
+  baseAmount: number;
+  vatAmount: number;
+  whtAmount: number;
+  netPaid: number;
+  transferDate: string;
+}
+
+export interface ShipmentFinancials {
+  id: string;
+  diNumber: string;
+  shipmentType: "container" | "bulk" | "domestic";
+  invoiceNo: string;
+  customer: string;
+  product: string;
+  volumeMt: number;
+  sellingPrice: number;
+  revenue: number;
+  cogs: number;
+  costRows: CostRow[];
+}
+
 export interface Shipment {
   di_no: string;
   po_no: string;
@@ -261,7 +285,53 @@ export function logoutUser() {
   }
 }
 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqxDMQh0F34k7CGmwP_hd5aFXWfiUxqWR9B9-1v28/dev";
+
+export async function syncWithGoogleSheet() {
+  if (typeof window === "undefined") return;
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, { method: "GET" });
+    if (response.ok) {
+      const data = await response.json();
+      if (data) {
+        if (Array.isArray(data.customers)) {
+          localStorage.setItem(LOCAL_STORAGE_KEYS.CUSTOMERS, JSON.stringify(data.customers));
+        }
+        if (Array.isArray(data.purchaseOrders)) {
+          localStorage.setItem(LOCAL_STORAGE_KEYS.POS, JSON.stringify(data.purchaseOrders));
+        }
+        if (Array.isArray(data.shipments)) {
+          localStorage.setItem(LOCAL_STORAGE_KEYS.SHIPMENTS, JSON.stringify(data.shipments));
+        }
+        if (Array.isArray(data.financialLogs)) {
+          localStorage.setItem("wcat_financial_logs", JSON.stringify(data.financialLogs));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to fetch from live Google Sheet, falling back to local database.", err);
+  }
+}
+
+export async function postToGoogleSheet(action: string, payload: Record<string, unknown>) {
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ action, ...payload })
+    });
+    return true;
+  } catch (err) {
+    console.error("Failed to post to Google Sheet", err);
+    return false;
+  }
+}
+
 export async function getCustomers(): Promise<Customer[]> {
+  await syncWithGoogleSheet();
   if (isLiveSupabase && supabase) {
     const { data, error } = await supabase.from("customers").select("*");
     if (!error && data) return data as Customer[];
@@ -273,9 +343,9 @@ export async function getCustomers(): Promise<Customer[]> {
 }
 
 export async function getPurchaseOrders(customerEmail?: string): Promise<PurchaseOrder[]> {
+  await syncWithGoogleSheet();
   if (isLiveSupabase && supabase) {
     let query = supabase.from("purchase_orders").select("*");
-    // If client, we filter down
     if (customerEmail) {
       const { data: clientData } = await supabase
         .from("customers")
@@ -295,7 +365,6 @@ export async function getPurchaseOrders(customerEmail?: string): Promise<Purchas
   const pos: PurchaseOrder[] = raw ? JSON.parse(raw) : MOCK_POS;
 
   if (customerEmail) {
-    // Find customer_id matching the email
     const custs = await getCustomers();
     const targetCust = custs.find(c => c.email.toLowerCase() === customerEmail.toLowerCase());
     if (targetCust) {
@@ -307,6 +376,7 @@ export async function getPurchaseOrders(customerEmail?: string): Promise<Purchas
 }
 
 export async function getShipments(poNos?: string[]): Promise<Shipment[]> {
+  await syncWithGoogleSheet();
   if (isLiveSupabase && supabase) {
     let query = supabase.from("shipments").select("*");
     if (poNos && poNos.length > 0) {
@@ -327,6 +397,8 @@ export async function getShipments(poNos?: string[]): Promise<Shipment[]> {
 }
 
 export async function updateShipment(diNo: string, updates: Partial<Shipment>): Promise<Shipment> {
+  await postToGoogleSheet("updateShipment", { diNo, updates });
+
   if (isLiveSupabase && supabase) {
     const { data, error } = await supabase
       .from("shipments")
@@ -356,6 +428,8 @@ export async function updateShipment(diNo: string, updates: Partial<Shipment>): 
 }
 
 export async function createPurchaseOrder(po: PurchaseOrder, shipments: Shipment[]): Promise<boolean> {
+  await postToGoogleSheet("createPurchaseOrder", { po, shipments });
+
   if (isLiveSupabase && supabase) {
     const { error: poError } = await supabase.from("purchase_orders").insert(po);
     if (poError) return false;
@@ -382,6 +456,8 @@ export async function updateShipmentsBulk(
   diNos: string[],
   updates: Partial<Shipment>
 ): Promise<boolean> {
+  await postToGoogleSheet("updateShipmentsBulk", { diNos, updates });
+
   if (isLiveSupabase && supabase) {
     const { error } = await supabase
       .from("shipments")
@@ -410,6 +486,8 @@ export async function updateShipmentsBulk(
 }
 
 export async function createShipments(newShipments: Shipment[]): Promise<boolean> {
+  await postToGoogleSheet("createShipments", { shipments: newShipments });
+
   if (isLiveSupabase && supabase) {
     const { error } = await supabase.from("shipments").insert(newShipments);
     return !error;
@@ -421,5 +499,24 @@ export async function createShipments(newShipments: Shipment[]): Promise<boolean
   ships.push(...newShipments);
   localStorage.setItem(LOCAL_STORAGE_KEYS.SHIPMENTS, JSON.stringify(ships));
 
+  return true;
+}
+
+export async function getFinancialLogs(): Promise<ShipmentFinancials[]> {
+  await syncWithGoogleSheet();
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem("wcat_financial_logs");
+  return raw ? JSON.parse(raw) : [];
+}
+
+export async function saveFinancialLog(newLog: ShipmentFinancials): Promise<boolean> {
+  await postToGoogleSheet("createFinancialLog", { financialLog: newLog });
+
+  if (typeof window !== "undefined") {
+    const raw = localStorage.getItem("wcat_financial_logs");
+    const logs: ShipmentFinancials[] = raw ? JSON.parse(raw) : [];
+    logs.unshift(newLog);
+    localStorage.setItem("wcat_financial_logs", JSON.stringify(logs));
+  }
   return true;
 }
