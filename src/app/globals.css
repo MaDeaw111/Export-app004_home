@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+:root {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --primary: #3b82f6;
+  --success: #10b981;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-success: var(--success);
+}
+
+body {
+  background-color: #080c14;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(20, 50, 100, 0.25) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(13, 20, 35, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-card {
+  background: rgba(20, 30, 55, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(25, 40, 75, 0.6);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 12px 40px 0 rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.glass-input {
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-input:focus {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: none;
+}
+
+/* Premium Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 30, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.4);
+}
+
+/* Timeline/Stepper custom animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.active-pulse {
+  animation: pulseGlow 2s infinite;
+}
+
+/* ======================================================== */
+/* LUXURY LIGHT MODE THEME OVERRIDES                        */
+/* ======================================================== */
+
+body.light-theme {
+  background-color: #FFFFFF;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(229, 231, 235, 0.4) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.03) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(229, 231, 235, 0.2) 0px, transparent 50%);
+  color: #374151;
+}
+
+/* Glassmorphism Overrides */
+body.light-theme .glass-panel {
+  background: #FFFFFF;
+  border-color: #E5E7EB;
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.03);
+}
+
+body.light-theme .glass-card {
+  background: #FFFFFF;
+  border-color: #E5E7EB;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+body.light-theme .glass-card:hover {
+  background: #FAFAFA;
+  border-color: #D1D5DB;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+body.light-theme .glass-input {
+  background: #FFFFFF;
+  border-color: #E5E7EB;
+  color: #1A2B49;
+}
+
+body.light-theme .glass-input:focus {
+  background: #FFFFFF;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Typography Overrides */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme h5,
+body.light-theme h6 {
+  color: #1A2B49 !important;
+}
+
+body.light-theme .text-white {
+  color: #1A2B49 !important;
+}
+
+body.light-theme .text-slate-100,
+body.light-theme .text-slate-200,
+body.light-theme .text-slate-300 {
+  color: #1A2B49 !important;
+}
+
+body.light-theme .text-slate-400,
+body.light-theme .text-slate-500,
+body.light-theme .text-slate-655 {
+  color: #374151 !important;
+}
+
+/* Stepper Background Track Lines */
+body.light-theme .bg-slate-800\/80 {
+  background-color: #E5E7EB !important;
+}
+
+body.light-theme .text-slate-600 {
+  color: #9CA3AF !important;
+}
+
+/* Calendar & Grid Overrides */
+body.light-theme .border-slate-900,
+body.light-theme .border-slate-900\/80,
+body.light-theme .border-slate-900\/60,
+body.light-theme .border-slate-850,
+body.light-theme .border-slate-800,
+body.light-theme .border-slate-800\/80,
+body.light-theme .border-slate-800\/50,
+body.light-theme .border-slate-950,
+body.light-theme .divide-slate-900,
+body.light-theme .divide-slate-900\/60 {
+  border-color: #E5E7EB !important;
+}
+
+body.light-theme .bg-slate-950\/20,
+body.light-theme .bg-slate-950\/10,
+body.light-theme .bg-slate-950\/40,
+body.light-theme .bg-slate-900\/20,
+body.light-theme .bg-slate-900\/30,
+body.light-theme .bg-slate-900\/40,
+body.light-theme .bg-slate-900\/60 {
+  background-color: #F9FAFB !important;
+}
+
+body.light-theme .bg-slate-950\/30 {
+  background-color: #FAFAFA !important;
+  border-color: #E5E7EB !important;
+}
+
+body.light-theme .bg-slate-900 {
+  background-color: #F9FAFB !important;
+}
+
+/* Draggable Shipment Cards in Calendar */
+body.light-theme .cursor-grab {
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+  color: #374151 !important;
+}
+
+body.light-theme .cursor-grab:hover {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Dynamic Heatmap Overrides for Light Mode */
+body.light-theme .bg-emerald-950\/30 {
+  background-color: #ECFDF5 !important;
+  color: #047857 !important;
+  border-color: #A7F3D0 !important;
+}
+body.light-theme .bg-yellow-950\/40 {
+  background-color: #FFFBEB !important;
+  color: #B45309 !important;
+  border-color: #FDE68A !important;
+}
+
+/* Dynamic Alert Styles */
+/* 10+ loads Peak Alert shifts to Crimson Red (#C41E3A) */
+body.light-theme .bg-red-950\/45 {
+  background-color: #FDF2F2 !important;
+  color: #C41E3A !important;
+  border-color: #FBD5D5 !important;
+}
+
+body.light-theme .bg-red-600 {
+  background-color: #C41E3A !important;
+  border-color: #B31B34 !important;
+  color: #FFFFFF !important;
+}
+
+body.light-theme .text-emerald-300,
+body.light-theme .text-emerald-400 {
+  color: #047857 !important;
+}
+body.light-theme .text-yellow-300,
+body.light-theme .text-yellow-400 {
+  color: #B45309 !important;
+}
+body.light-theme .text-red-300,
+body.light-theme .text-red-400 {
+  color: #C41E3A !important;
+}
+
+body.light-theme .text-blue-300 {
+  color: #1E3A8A !important;
+}
+
+/* Sidebar Custom Styling */
+body.light-theme aside,
+body.light-theme .bg-slate-950 {
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Dynamic Form Elements */
+body.light-theme select,
+body.light-theme input,
+body.light-theme textarea {
+  background-color: #FFFFFF !important;
+  color: #1A2B49 !important;
+  border-color: #D1D5DB !important;
+}
+
+body.light-theme select:focus,
+body.light-theme input:focus,
+body.light-theme textarea:focus {
+  border-color: #3B82F6 !important;
+}
